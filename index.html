@@ -1,0 +1,1648 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Visor de Ventas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<style>
+  /* Layout: one continuous 3D scene for a TV. Zona › Proyecto › Unidad. One left panel whose content follows the camera level, a narrow level rail on the right, tools bottom-right. Sizes scale with the screen width so text reads from 2–3 m. */
+  :root {
+    --brand: #132f33;
+    --accent: #dda11b;
+    --sky-top: #cfdfe2;
+    --sky-bottom: #eceae3;
+    --panel: rgba(255, 255, 255, .95);
+    --panel-solid: #ffffff;
+    --panel-2: #f2f0eb;
+    --ink: #132f33;
+    --muted: #5a6967;
+    --line: rgba(19, 47, 51, .13);
+    --on: #132f33;
+    --on-ink: #f6f4ef;
+    --ok: #2f8a5f; --ok-bg: rgba(47, 138, 95, .13);
+    --warn: #9a6c06; --warn-bg: rgba(221, 161, 27, .18);
+    --sold: #5f5b55; --sold-bg: rgba(95, 91, 85, .13);
+    --plan-bg: #ffffff; --plan-ink: #132f33; --plan-muted: #6b7876; --plan-corr: #ece8de; --plan-core: #cfcac0; --plan-sel: #dda11b;
+    --shadow: 0 10px 30px rgba(19, 47, 51, .16);
+    --font-display: "Anton", Impact, "Arial Narrow", sans-serif;
+    --font-body: "Archivo", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sky-top: #1b3236; --sky-bottom: #0e1d20;
+      --panel: rgba(16, 35, 38, .95); --panel-solid: #112629; --panel-2: #193437;
+      --ink: #ece8de; --muted: #a2b3b0; --line: rgba(236, 232, 222, .14);
+      --on: #dda11b; --on-ink: #132f33;
+      --ok: #5cc28f; --ok-bg: rgba(92, 194, 143, .15);
+      --warn: #e7b443; --warn-bg: rgba(231, 180, 67, .16);
+      --sold: #b9b4aa; --sold-bg: rgba(185, 180, 170, .14);
+      --plan-bg: #0f2427; --plan-ink: #e6e2d8; --plan-muted: #9db0ad; --plan-corr: #1b383c; --plan-core: #2b4649;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --sky-top: #1b3236; --sky-bottom: #0e1d20;
+    --panel: rgba(16, 35, 38, .95); --panel-solid: #112629; --panel-2: #193437;
+    --ink: #ece8de; --muted: #a2b3b0; --line: rgba(236, 232, 222, .14);
+    --on: #dda11b; --on-ink: #132f33;
+    --ok: #5cc28f; --ok-bg: rgba(92, 194, 143, .15);
+    --warn: #e7b443; --warn-bg: rgba(231, 180, 67, .16);
+    --sold: #b9b4aa; --sold-bg: rgba(185, 180, 170, .14);
+    --plan-bg: #0f2427; --plan-ink: #e6e2d8; --plan-muted: #9db0ad; --plan-corr: #1b383c; --plan-core: #2b4649;
+    --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { height: 100%; font-size: clamp(13px, calc(0.72vw + 4px), 22px); }
+  body {
+    height: 100%; overflow: hidden;
+    background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+    color: var(--ink); font-family: var(--font-body); font-size: 1rem; line-height: 1.4;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .mono { font-family: var(--font-mono); }
+  .eyebrow { font: 500 .78rem var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .muted { color: var(--muted); }
+
+  #app { position: relative; height: 100%; overflow: hidden; }
+  #stage { position: absolute; inset: 0; touch-action: none; }
+  #stage canvas { display: block; width: 100%; height: 100%; outline: none; }
+  .tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .tag { position: absolute; left: 0; top: 0; white-space: nowrap; }
+  .utag { font: 500 .8rem var(--font-mono); padding: .2rem .5rem; border-radius: .3rem; background: rgba(255, 255, 255, .95); color: #132f33; border: 1px solid rgba(19, 47, 51, .2); display: flex; gap: .35rem; align-items: center; }
+  .utag i { width: .5rem; height: .5rem; border-radius: 50%; display: block; }
+  .utag.sel { background: #132f33; color: #f6f4ef; }
+  .utag.dim { opacity: .3; }
+  .ptag { pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: .5rem; background: rgba(255, 255, 255, .96); color: #132f33; padding: .35rem .7rem .35rem .35rem; border-radius: 999px; border: 0; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); font-weight: 600; font-size: .95rem; }
+  .ptag .n { width: 1.7rem; height: 1.7rem; border-radius: 50%; background: #132f33; color: #fff; display: grid; place-items: center; font-size: .85rem; }
+  .ptag small { font: 500 .8rem var(--font-mono); color: #5a6967; }
+  .ptag.on { outline: 3px solid #dda11b; }
+  .projtag { pointer-events: auto; cursor: pointer; border: 0; background: #dda11b; color: #132f33; padding: .7rem 1.1rem; border-radius: .7rem; box-shadow: 0 6px 20px rgba(0, 0, 0, .25); display: grid; gap: .1rem; text-align: left; }
+  .projtag b { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; letter-spacing: .04em; line-height: 1; }
+  .projtag span { font-size: .85rem; font-weight: 600; }
+  .rtag { font: 500 .85rem var(--font-mono); color: #132f33; background: rgba(255, 255, 255, .8); padding: .15rem .5rem; border-radius: .3rem; }
+  .tip { position: absolute; left: 0; top: 0; pointer-events: none; background: #132f33; color: #f6f4ef; padding: .45rem .7rem; border-radius: .45rem; font-size: .9rem; font-weight: 500; white-space: nowrap; box-shadow: var(--shadow); }
+  .loading { position: absolute; inset: 0; display: grid; place-items: center; font: .9rem var(--font-mono); color: var(--muted); }
+
+  .float { position: absolute; background: var(--panel); border: 1px solid var(--line); border-radius: .9rem; box-shadow: var(--shadow); backdrop-filter: blur(10px); }
+
+  /* top bar */
+  .topbar { position: absolute; top: .9rem; left: max(.9rem, env(safe-area-inset-left, 0px)); right: max(.9rem, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: .8rem; pointer-events: none; flex-wrap: wrap; }
+  .topbar > * { pointer-events: auto; position: static; }
+  .brand { display: flex; align-items: center; gap: .6rem; padding: .6rem 1.1rem; background: var(--brand); color: #f6f4ef; border-color: transparent; }
+  .brand b { font-family: var(--font-display); font-weight: 400; font-size: 1.45rem; letter-spacing: .06em; line-height: 1; }
+  .brand b span { color: var(--accent); }
+  .crumbs { display: flex; align-items: center; gap: .3rem; padding: .35rem; }
+  .crumb { border: 0; background: transparent; padding: .55rem .9rem; border-radius: 999px; font-weight: 600; font-size: 1rem; cursor: pointer; color: var(--muted); }
+  .crumb.on { background: var(--on); color: var(--on-ink); cursor: default; }
+  .crumb:disabled { cursor: default; opacity: .5; }
+  .sep { color: var(--muted); font-size: 1.1rem; }
+  .top-right { margin-left: auto; display: flex; gap: .6rem; align-items: center; }
+  .top-right > * { position: static; }
+  .seg { display: flex; padding: .3rem; gap: .2rem; }
+  .seg button { border: 0; background: transparent; padding: .45rem .8rem; border-radius: .55rem; font-weight: 700; cursor: pointer; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--on); color: var(--on-ink); }
+  .topbtn { display: inline-flex; align-items: center; gap: .5rem; padding: .7rem 1rem; font-weight: 600; cursor: pointer; }
+  .topbtn svg, .tool svg { width: 1.15rem; height: 1.15rem; flex: none; }
+
+  /* left panel */
+  .panel { left: max(.9rem, env(safe-area-inset-left, 0px)); top: 5.2rem; bottom: .9rem; width: 25rem; display: flex; flex-direction: column; overflow: hidden; }
+  .panel-body { overflow-y: auto; padding: 1.3rem 1.4rem 1.5rem; display: grid; gap: 1.2rem; align-content: start; min-height: 0; flex: 1; }
+  .panel h1 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 2.6rem; line-height: 1; letter-spacing: .02em; }
+  .panel h2 { margin: 0; font-size: 1.4rem; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+  .group { display: grid; gap: .55rem; }
+  .poi-list { display: grid; }
+  .poi { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; gap: .7rem; align-items: center; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: .75rem 0; cursor: pointer; font-size: 1.05rem; }
+  .poi .n { width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--on); color: var(--on-ink); display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
+  .poi b { font: 600 1rem var(--font-mono); }
+  .poi.on { color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .chip { border: 1px solid var(--line); background: var(--panel-solid); padding: .55rem .9rem; border-radius: 999px; font-size: .95rem; font-weight: 600; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--on); color: var(--on-ink); border-color: var(--on); }
+  .range2 { display: grid; gap: .3rem; }
+  .range2 input { width: 100%; accent-color: #dda11b; }
+  .range2 .vals { display: flex; justify-content: space-between; font: 600 .95rem var(--font-mono); }
+  .check { display: flex; align-items: center; gap: .6rem; font-size: 1rem; cursor: pointer; }
+  .check input { accent-color: #dda11b; width: 1.2rem; height: 1.2rem; }
+  .count { display: flex; align-items: center; justify-content: space-between; background: var(--panel-2); border-radius: .7rem; padding: .7rem .9rem; }
+  .count b { font-family: var(--font-display); font-weight: 400; font-size: 1.9rem; line-height: 1; }
+  .linkbtn { border: 0; background: none; color: var(--muted); text-decoration: underline; cursor: pointer; font-weight: 600; padding: .3rem; }
+  .stack { display: grid; gap: .35rem; }
+  .srow { display: grid; grid-template-columns: 1.8rem minmax(0, 1fr); gap: .45rem; align-items: start; }
+  .slabel { font: 600 .85rem var(--font-mono); color: var(--muted); padding-top: .55rem; }
+  .scells { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .cell { min-width: 2.9rem; border: 2px solid transparent; border-radius: .4rem; padding: .35rem .3rem; cursor: pointer; color: #fff; display: grid; justify-items: center; line-height: 1.1; }
+  .cell b { font-size: .95rem; } .cell small { font-size: .7rem; opacity: .92; }
+  .cell.c-disponible { background: #3f9d6b; } .cell.c-reservado { background: #b8860b; } .cell.c-vendido { background: #8e8a82; }
+  .cell.dim { opacity: .22; }
+  .cell.sel { border-color: var(--ink); }
+  .btn { display: inline-flex; justify-content: center; align-items: center; gap: .5rem; padding: .9rem 1rem; border-radius: .7rem; font-weight: 700; font-size: 1.05rem; cursor: pointer; border: 1px solid transparent; width: 100%; }
+  .btn-gold { background: var(--accent); color: #132f33; }
+  .btn-line { background: var(--panel-solid); border-color: var(--line); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .back { border: 0; background: none; padding: 0; color: var(--muted); cursor: pointer; font-size: 1rem; justify-self: start; }
+  .ftitle { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+  .ftitle h2 { font-family: var(--font-display); font-weight: 400; font-size: 2.3rem; line-height: 1; }
+  .pill { font: 600 .78rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; padding: .3rem .6rem; border-radius: .35rem; }
+  .st-disponible { color: var(--ok); } .pill.st-disponible { background: var(--ok-bg); }
+  .st-reservado { color: var(--warn); } .pill.st-reservado { background: var(--warn-bg); }
+  .st-vendido { color: var(--sold); } .pill.st-vendido { background: var(--sold-bg); }
+  .price-row { display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap; }
+  .price { font-family: var(--font-display); font-size: 2.3rem; line-height: 1; }
+  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; }
+  .fact { background: var(--panel-2); border-radius: .6rem; padding: .6rem .55rem; display: grid; gap: .1rem; min-width: 0; }
+  .fact b { font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fact span { font-size: .78rem; color: var(--muted); }
+  .tabs3 { display: flex; gap: .25rem; background: var(--panel-2); padding: .25rem; border-radius: .7rem; }
+  .tabs3 button { flex: 1; border: 0; background: transparent; padding: .65rem .4rem; border-radius: .55rem; font-weight: 700; font-size: .95rem; cursor: pointer; }
+  .tabs3 button[aria-selected="true"] { background: var(--on); color: var(--on-ink); }
+  .plan { border: 1px solid var(--line); border-radius: .6rem; background: var(--plan-bg); padding: .35rem; }
+  .plan svg { display: block; width: 100%; height: auto; }
+  .renders { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+  .render { aspect-ratio: 4 / 3; max-width: 100%; border-radius: .5rem; background: repeating-linear-gradient(135deg, var(--panel-2) 0 12px, transparent 12px 24px); border: 1px solid var(--line); display: grid; place-items: center; text-align: center; font-size: .8rem; color: var(--muted); padding: .4rem; }
+  .actions2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .5rem; }
+  .reopen { left: max(.9rem, env(safe-area-inset-left, 0px)); top: 5.2rem; padding: .8rem 1rem; font-weight: 700; cursor: pointer; display: inline-flex; gap: .5rem; align-items: center; }
+  .iconbtn { border: 1px solid var(--line); background: var(--panel-solid); border-radius: .6rem; width: 2.8rem; height: 2.8rem; font-size: 1.3rem; cursor: pointer; flex: none; }
+
+  /* level rail */
+  .rail { right: max(.9rem, env(safe-area-inset-right, 0px)); top: 5.2rem; width: 4.4rem; padding: .35rem; display: grid; gap: .2rem; max-height: calc(100% - 11rem); overflow-y: auto; }
+  .lvl { border: 0; background: transparent; border-radius: .6rem; padding: .45rem 0; cursor: pointer; display: grid; justify-items: center; gap: .05rem; }
+  .lvl b { font-size: 1.15rem; }
+  .lvl small { font: 500 .68rem var(--font-mono); color: var(--muted); }
+  .lvl:hover { background: var(--panel-2); }
+  .lvl[aria-pressed="true"] { background: var(--on); color: var(--on-ink); }
+  .lvl[aria-pressed="true"] small { color: inherit; opacity: .8; }
+
+  /* toolbar */
+  .toolbar { right: max(.9rem, env(safe-area-inset-right, 0px)); bottom: calc(.9rem + env(safe-area-inset-bottom, 0px)); display: flex; gap: .25rem; padding: .35rem; max-width: calc(100% - 28rem); flex-wrap: wrap; justify-content: flex-end; }
+  .tool { border: 0; background: transparent; padding: .65rem .85rem; border-radius: .6rem; cursor: pointer; font-weight: 700; font-size: .95rem; display: inline-flex; gap: .45rem; align-items: center; white-space: nowrap; }
+  .tool:hover { background: var(--panel-2); }
+  .tool[aria-pressed="true"] { background: var(--on); color: var(--on-ink); }
+
+  /* 360 overlay */
+  .v360ui { position: absolute; inset: 0; pointer-events: none; }
+  .v360ui > * { pointer-events: auto; }
+  .v-back { position: absolute; left: max(.9rem, env(safe-area-inset-left, 0px)); top: 5.2rem; padding: .8rem 1.1rem; font-weight: 700; cursor: pointer; }
+  .v-label { position: absolute; right: max(.9rem, env(safe-area-inset-right, 0px)); top: 5.2rem; padding: .8rem 1.1rem; text-align: right; display: grid; gap: .1rem; }
+  .v-label b { font-size: 1.3rem; }
+  .v-rooms { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); display: flex; gap: .3rem; padding: .35rem; flex-wrap: wrap; justify-content: center; max-width: 60%; }
+  .v-rooms button { border: 0; background: transparent; padding: .75rem 1rem; border-radius: .6rem; font-weight: 700; cursor: pointer; }
+  .v-rooms button[aria-pressed="true"] { background: var(--on); color: var(--on-ink); }
+  .v-mini { position: absolute; right: max(.9rem, env(safe-area-inset-right, 0px)); bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); width: 17rem; padding: .4rem; }
+  .v-mini svg { display: block; width: 100%; height: auto; }
+  .v-hint { position: absolute; left: max(.9rem, env(safe-area-inset-left, 0px)); bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); padding: .7rem 1rem; font-size: .95rem; }
+
+  .exit-present { right: max(.9rem, env(safe-area-inset-right, 0px)); bottom: calc(.9rem + env(safe-area-inset-bottom, 0px)); padding: .7rem 1rem; font-weight: 700; cursor: pointer; opacity: .55; }
+  .exit-present:hover { opacity: 1; }
+  body.present .topbar, body.present .panel, body.present .rail, body.present .toolbar, body.present .reopen { display: none; }
+
+  /* broker */
+  .modal-bg { position: absolute; inset: 0; background: rgba(10, 24, 27, .5); display: grid; place-items: center; z-index: 20; padding-left: max(1rem, env(safe-area-inset-left, 0px)); padding-right: max(1rem, env(safe-area-inset-right, 0px)); }
+  .broker-card { position: relative; width: min(78rem, 100%); max-height: calc(100% - 3rem); display: flex; flex-direction: column; overflow: hidden; }
+  .broker-card.login { width: min(26rem, 100%); }
+  .bk-head { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.4rem; border-bottom: 1px solid var(--line); }
+  .bk-head h2 { margin: 0; font-size: 1.4rem; }
+  .bk-body { padding: 1.2rem 1.4rem; overflow: auto; display: grid; gap: 1rem; min-height: 0; }
+  .bk-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; }
+  .bk-kpi { background: var(--panel-2); border-radius: .6rem; padding: .7rem .9rem; display: grid; gap: .1rem; }
+  .bk-kpi b { font-family: var(--font-display); font-weight: 400; font-size: 1.8rem; line-height: 1; }
+  .bk-kpi span { font-size: .85rem; color: var(--muted); }
+  .bk-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: .6rem; }
+  table { border-collapse: collapse; width: 100%; min-width: 60rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line); font-size: .95rem; vertical-align: middle; }
+  th { font: 500 .75rem var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); background: var(--panel-2); position: sticky; top: 0; }
+  tr.focus td { background: var(--warn-bg); }
+  td select { min-width: 8.5rem; }
+  td input, td select { background: var(--panel-solid); border: 1px solid var(--line); border-radius: .4rem; padding: .4rem .5rem; width: 100%; }
+  td input[type="number"] { width: 8.5rem; font-family: var(--font-mono); }
+  .days { display: flex; gap: .3rem; align-items: center; flex-wrap: wrap; }
+  .days button { border: 1px solid var(--line); background: var(--panel-solid); border-radius: .4rem; padding: .3rem .5rem; cursor: pointer; font-weight: 600; font-size: .85rem; }
+  .soon { color: var(--sold); font-weight: 700; }
+  .login-form { padding: 1.4rem; display: grid; gap: .9rem; }
+  .login-form label { display: grid; gap: .3rem; font: 500 .78rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .login-form input { background: var(--panel-solid); border: 1px solid var(--line); border-radius: .5rem; padding: .7rem .8rem; font-size: 1rem; text-transform: none; letter-spacing: 0; font-family: var(--font-body); color: var(--ink); }
+  .x { border: 0; background: none; font-size: 1.8rem; line-height: 1; cursor: pointer; color: var(--muted); margin-left: auto; padding: .2rem .4rem; }
+
+
+  .bk-over { position: absolute; inset: 0; background: rgba(10, 24, 27, .45); display: grid; place-items: center; padding: 1rem; z-index: 2; }
+  .bk-dialog { position: relative; width: min(30rem, 100%); max-height: 100%; overflow-y: auto; padding: 1.4rem; display: grid; gap: .9rem; background: var(--panel-solid); }
+  .bk-dialog h3 { margin: 0; font-size: 1.4rem; }
+  .bk-dialog label, .bk-dialog .lbl { display: grid; gap: .3rem; font: 500 .78rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .bk-dialog input { width: 100%; min-width: 0; background: var(--panel-solid); border: 1px solid var(--line); border-radius: .5rem; padding: .65rem .75rem; font: 1rem var(--font-body); color: var(--ink); text-transform: none; letter-spacing: 0; }
+  .bk-dialog input.code { font: 600 1.4rem var(--font-mono); letter-spacing: .4em; text-align: center; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .6rem; }
+  .segs2 { display: flex; gap: .3rem; background: var(--panel-2); padding: .25rem; border-radius: .6rem; }
+  .segs2 button { flex: 1; border: 0; background: transparent; padding: .55rem; border-radius: .45rem; font-weight: 700; cursor: pointer; }
+  .segs2 button[aria-pressed="true"] { background: var(--on); color: var(--on-ink); }
+  .err { margin: 0; color: var(--sold); font-weight: 700; }
+  .bk-dialog.mail { width: min(34rem, 100%); }
+  .mail-box { border: 1px solid var(--line); border-radius: .6rem; overflow: hidden; }
+  .mail-h { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: .5rem; padding: .55rem .8rem; border-bottom: 1px solid var(--line); background: var(--panel-2); font-size: .92rem; }
+  .mail-h span { color: var(--muted); }
+  .mail-box dl { margin: 0; padding: .6rem .8rem; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .35rem 1rem; font-size: .92rem; }
+  .mail-box dt { color: var(--muted); } .mail-box dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+  .notices { display: grid; gap: .35rem; }
+  .notice { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; text-align: left; border: 1px solid var(--line); background: var(--panel-solid); border-radius: .5rem; padding: .6rem .8rem; cursor: pointer; }
+  .notice span { color: var(--muted); font-size: .88rem; }
+  table { min-width: 72rem; }
+  /* zona: categorías, íconos y calles */
+  .ptag .ic, .poi .ic, .cat .ic { display: grid; place-items: center; color: #fff; flex: none; }
+  .ptag { padding: .3rem .65rem .3rem .3rem; font-size: .88rem; }
+  .ptag .ic { width: 1.75rem; height: 1.75rem; border-radius: .45rem; }
+  .ptag .ic svg, .poi .ic svg { width: 1.05rem; height: 1.05rem; }
+  .poi .ic { width: 1.8rem; height: 1.8rem; border-radius: .45rem; }
+  .cats { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .cat { display: inline-flex; align-items: center; gap: .45rem; border: 1px solid var(--line); background: var(--panel-solid); padding: .3rem .75rem .3rem .3rem; border-radius: 999px; font-weight: 600; font-size: .92rem; cursor: pointer; }
+  .cat .ic { width: 1.6rem; height: 1.6rem; border-radius: 50%; }
+  .cat .ic svg { width: .95rem; height: .95rem; }
+  .cat[aria-pressed="false"] { opacity: .5; }
+  .cat[aria-pressed="false"] .ic { filter: grayscale(1); }
+  .rtag.road { font-size: .74rem; background: rgba(19, 47, 51, .8); color: #f6f4ef; letter-spacing: .02em; }
+  /* hora y clima */
+  .sky { right: max(.9rem, env(safe-area-inset-right, 0px)); bottom: calc(.9rem + env(safe-area-inset-bottom, 0px)); width: 15rem; padding: .7rem .8rem .8rem; display: grid; gap: .45rem; }
+  .sky-time { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
+  .sky-time b { font: 600 1.25rem var(--font-mono); }
+  .sky input { width: 100%; accent-color: #dda11b; margin: 0; }
+  .sky-w { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; }
+  .sky-w button { border: 0; background: var(--panel-2); border-radius: .5rem; padding: .5rem 0; cursor: pointer; display: grid; place-items: center; }
+  .sky-w button[aria-pressed="true"] { background: var(--on); color: var(--on-ink); }
+  .sky-w svg { width: 1.3rem; height: 1.3rem; }
+  body.present .sky { display: none; }
+  @media (max-width: 820px) {
+    html { font-size: 14px; }
+    .sky { left: max(.9rem, env(safe-area-inset-left, 0px)); right: auto; top: 12.6rem; bottom: auto; width: 11.5rem; padding: .5rem .6rem; }
+    .sky-time .eyebrow { display: none; }
+    .panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; height: 46%; border-radius: 1rem 1rem 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+    .crumbs { order: 3; width: 100%; justify-content: center; }
+    .rail { top: 12.6rem; width: 3.6rem; max-height: calc(54% - 17rem); }
+    .toolbar { bottom: calc(46% + .6rem); max-width: calc(100% - 1.8rem); }
+    .tool span { display: none; }
+    .topbtn span { display: none; }
+    .reopen { top: auto; bottom: 1rem; }
+    .v-rooms { max-width: 100%; bottom: 13rem; }
+    .v-mini { width: 11rem; }
+    .bk-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
+
+<div id="app">
+  <div id="stage"><div class="loading" id="loading">Cargando…</div><div class="tags" id="tags"></div><div class="tip" id="tip" hidden></div></div>
+  <header class="topbar">
+    <div class="float brand"><b>TORRE MAREA<span>.</span></b></div>
+    <nav class="float crumbs" id="crumbs" aria-label="Ruta"></nav>
+    <div class="top-right">
+      <div class="float seg" role="group" aria-label="Idioma"><button type="button" data-lang="es" aria-pressed="true">ES</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
+      <button class="float topbtn" type="button" id="btn-broker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span id="lbl-broker">Broker</span></button>
+      <button class="float topbtn" type="button" id="btn-present"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="13" rx="1"/><path d="M8 21h8M12 17v4"/></svg><span id="lbl-present">Presentar</span></button>
+    </div>
+  </header>
+  <aside class="float panel" id="panel"><div class="panel-body" id="panel-body"></div></aside>
+  <button class="float reopen" type="button" id="reopen" hidden></button>
+  <nav class="float rail" id="rail" aria-label="Niveles"></nav>
+  <div class="float toolbar" id="toolbar" role="toolbar" aria-label="Herramientas"></div>
+  <div class="float sky" id="sky" hidden></div>
+  <div class="v360ui" id="v360ui" hidden></div>
+  <button class="float exit-present" type="button" id="exit-present" hidden></button>
+  <div class="modal-bg" id="broker" hidden><div class="float broker-card" id="broker-card"></div></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+const $ = s => document.querySelector(s);
+const fmt = v => v.toLocaleString('en-US');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* ================= DATA (inventado) ================= */
+const FH = 3.2, H = 2.9;
+const LEVELS = [
+  { id: 'P', name: 'Parqueo', elev: -3.2 },
+  { id: 'L0', name: 'Lobby', elev: 0 },
+  { id: 'L1', name: 'Piso 1', elev: 3.2, floor: 1 },
+  { id: 'L2', name: 'Piso 2', elev: 6.4, floor: 2 },
+  { id: 'L3', name: 'Piso 3', elev: 9.6, floor: 3 },
+  { id: 'L4', name: 'Piso 4', elev: 12.8, floor: 4 },
+  { id: 'L5', name: 'Penthouse', elev: 16, floor: 5 },
+  { id: 'R', name: 'Azotea', elev: 19.2 },
+];
+const lvlIdx = id => LEVELS.findIndex(l => l.id === id);
+const TYPES = {
+  ES: { label: 'Estudio', hab: 0, banos: 1, w: 6, d: 7.8, ppm: 3150, rooms: [
+    { n: 'Estudio', k: 'estudio', x0: 0, z0: 0, x1: 6, z1: 4.8 },
+    { n: 'Cocina', k: 'cocina', x0: 0, z0: 4.8, x1: 3.4, z1: 7.8 },
+    { n: 'Baño', k: 'bano', x0: 3.4, z0: 4.8, x1: 6, z1: 7.8 }] },
+  '2H': { label: '2 habitaciones', hab: 2, banos: 2, w: 12, d: 7.8, ppm: 2950, rooms: [
+    { n: 'Sala-comedor', k: 'sala', x0: 0, z0: 0, x1: 5.5, z1: 7.8 },
+    { n: 'Cocina', k: 'cocina', x0: 5.5, z0: 4.6, x1: 8, z1: 7.8 },
+    { n: 'Hab. 2', k: 'hab', x0: 5.5, z0: 0, x1: 8, z1: 4.6 },
+    { n: 'Hab. principal', k: 'hab', main: true, x0: 8, z0: 0, x1: 12, z1: 4.6 },
+    { n: 'Baño', k: 'bano', x0: 8, z0: 4.6, x1: 10, z1: 7.8 },
+    { n: 'Baño 2', k: 'bano', x0: 10, z0: 4.6, x1: 12, z1: 7.8 }] },
+  '3H': { label: '3 habitaciones', hab: 3, banos: 2, w: 15, d: 7.8, ppm: 2800, rooms: [
+    { n: 'Sala', k: 'sala', x0: 0, z0: 0, x1: 6, z1: 4.8 },
+    { n: 'Comedor', k: 'sala', x0: 3.2, z0: 4.8, x1: 6, z1: 7.8 },
+    { n: 'Hab. 3', k: 'hab', x0: 0, z0: 4.8, x1: 3.2, z1: 7.8 },
+    { n: 'Cocina', k: 'cocina', x0: 6, z0: 4.8, x1: 9, z1: 7.8 },
+    { n: 'Hab. 2', k: 'hab', x0: 6, z0: 0, x1: 9, z1: 4.8 },
+    { n: 'Hab. principal', k: 'hab', main: true, x0: 9, z0: 0, x1: 15, z1: 4.8 },
+    { n: 'Baño 2', k: 'bano', x0: 9, z0: 4.8, x1: 12.5, z1: 7.8 },
+    { n: 'Baño principal', k: 'bano', x0: 12.5, z0: 4.8, x1: 15, z1: 7.8 }] },
+  PH: { label: 'Penthouse', hab: 3, banos: 3, w: 15, d: 18, ppm: 3650, rooms: [
+    { n: 'Sala', k: 'sala', x0: 0, z0: 0, x1: 9, z1: 8 },
+    { n: 'Cocina', k: 'cocina', x0: 9, z0: 0, x1: 15, z1: 5 },
+    { n: 'Comedor', k: 'sala', x0: 9, z0: 5, x1: 15, z1: 8 },
+    { n: 'Pasillo', k: 'pasillo', x0: 0, z0: 8, x1: 10, z1: 10 },
+    { n: 'Baño 2', k: 'bano', x0: 10, z0: 8, x1: 12.5, z1: 12 },
+    { n: 'Hab. 3', k: 'hab', x0: 12.5, z0: 8, x1: 15, z1: 12 },
+    { n: 'Hab. principal', k: 'hab', main: true, x0: 0, z0: 10, x1: 7, z1: 18 },
+    { n: 'Vestidor', k: 'vestidor', x0: 7, z0: 10, x1: 10, z1: 14 },
+    { n: 'Baño principal', k: 'bano', x0: 7, z0: 14, x1: 10, z1: 18 },
+    { n: 'Hab. 2', k: 'hab', x0: 10, z0: 12, x1: 15, z1: 18 }] },
+  LC: { label: 'Local comercial', hab: 0, banos: 1, w: 12, d: 7.8, ppm: 2600, rooms: [
+    { n: 'Local', k: 'local', x0: 0, z0: 0, x1: 12, z1: 6 },
+    { n: 'Depósito', k: 'pasillo', x0: 0, z0: 6, x1: 9.5, z1: 7.8 },
+    { n: 'Baño', k: 'bano', x0: 9.5, z0: 6, x1: 12, z1: 7.8 }] },
+  LOBBY: { label: 'Lobby', amen: true, w: 12, d: 7.8, rooms: [{ n: 'Lobby', k: 'lobby', x0: 0, z0: 0, x1: 12, z1: 7.8 }] },
+  GYM: { label: 'Gimnasio', amen: true, w: 15, d: 7.8, rooms: [{ n: 'Gimnasio', k: 'gym', x0: 0, z0: 0, x1: 15, z1: 7.8 }] },
+  COWORK: { label: 'Coworking', amen: true, w: 15, d: 7.8, rooms: [{ n: 'Coworking', k: 'cowork', x0: 0, z0: 0, x1: 15, z1: 7.8 }] },
+};
+const TYPICAL = [
+  { code: '01', side: 's', x0: -18, type: '2H' }, { code: '02', side: 's', x0: -6, type: 'ES' },
+  { code: '03', side: 's', x0: 0, type: 'ES' }, { code: '04', side: 's', x0: 6, type: '2H' },
+  { code: '05', side: 'n', x0: -18, type: '3H' }, { code: '06', side: 'n', x0: 3, type: '3H' },
+];
+const LOBBY_SLOTS = [
+  { code: 'L1', side: 's', x0: -18, type: 'LC' }, { code: 'LB', side: 's', x0: -6, type: 'LOBBY' },
+  { code: 'L2', side: 's', x0: 6, type: 'LC' }, { code: 'GY', side: 'n', x0: -18, type: 'GYM' }, { code: 'CW', side: 'n', x0: 3, type: 'COWORK' },
+];
+const PH_SLOTS = [{ code: '01', side: 'full', x0: -18, type: 'PH' }, { code: '02', side: 'full', x0: 3, type: 'PH' }];
+const ST = ['vendido','vendido','reservado','disponible','vendido','disponible',
+            'vendido','disponible','disponible','vendido','reservado','disponible',
+            'disponible','reservado','disponible','disponible','vendido','disponible',
+            'disponible','disponible','disponible','reservado','disponible','disponible',
+            'vendido','disponible','disponible','reservado'];
+const STATUS = {
+  disponible: { label: 'Disponible', hex: 0x3f9d6b },
+  reservado: { label: 'Reservado', hex: 0xdda11b },
+  vendido: { label: 'Vendido', hex: 0xb4574a },
+};
+const PROGRESS = { P: [100, 100, 90], L0: [100, 85, 55], L1: [100, 80, 45], L2: [100, 70, 30], L3: [100, 55, 15], L4: [95, 30, 0], L5: [80, 10, 0], R: [60, 0, 0] };
+
+const UNITS = [];
+function addUnit(slot, level) {
+  const t = TYPES[slot.type]; if (t.amen) return;
+  const fl = level.floor || 0;
+  const area = Math.round(t.w * t.d);
+  const balc = slot.type === 'PH' ? 39 : slot.side === 's' && slot.type !== 'LC' ? Math.round(t.w * 1.8) : 0;
+  const price = Math.round(area * t.ppm * (1 + 0.025 * Math.max(fl - 1, 0)) * (slot.side !== 'n' ? 1.07 : 1) / 1000) * 1000;
+  const num = slot.type === 'LC' ? (slot.code === 'L1' ? 'Local 1' : 'Local 2') : String(fl) + slot.code;
+  UNITS.push({ id: 'U-' + num.replace(' ', ''), num, short: slot.type === 'LC' ? slot.code : num, level: level.id, levelName: level.name, slot, type: slot.type, area, balc, price,
+    status: ST[UNITS.length], view: slot.side === 'n' ? 'Norte, vista a la montaña' : slot.side === 's' ? 'Sur, vista al mar' : 'Sur y norte, mar y montaña' });
+}
+LEVELS.forEach(l => {
+  if (l.id === 'L0') LOBBY_SLOTS.forEach(s => addUnit(s, l));
+  if (l.floor >= 1 && l.floor <= 4) TYPICAL.forEach(s => addUnit(s, l));
+  if (l.id === 'L5') PH_SLOTS.forEach(s => addUnit(s, l));
+});
+const unitById = Object.fromEntries(UNITS.map(u => [u.id, u]));
+
+const state = { mode: 'zona', level: null, sel: null, hover: null, f: { types: new Set(), vistas: new Set(), pmin: 0, pmax: 1e9, free: false },
+  corte: false, xray: false, vida: true, girar: false, planta: false, balcon: false, room: 0, ftab: 'planta', panelHidden: false, poi: null, auth: false, bkFocus: null, present: false };
+
+/* ================= THREE SETUP ================= */
+const host = $('#stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, logarithmicDepthBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+host.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(renderer), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(32, 1, 0.3, 9000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = THREE.MathUtils.degToRad(86); controls.minDistance = 6; controls.maxDistance = 260;
+controls.autoRotateSpeed = 0.6;
+function resize() {
+  const w = host.clientWidth, h = host.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(h, 1);
+  applyOffset();
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(host); resize();
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0xbdb6a3, 0.6); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff3df, 2.2);
+sun.position.set(-40, 70, -55); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 300 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+scene.add(sun);
+
+const cutPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 8.7);
+const std = (color, r = .85, m = 0, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: r, metalness: m, ...extra });
+const MAT = {
+  slab: std(0xf1efea, .9), wall: std(0xf7f6f2, .92), wood: std(0xb88c62, .7), tile: std(0xe6e3dc, .4), corr: std(0xd8d2c4, .8),
+  facade: std(0xebe7dd, .9, 0, { transparent: true, opacity: 1 }), core: std(0xcfcac0, .95), mullion: std(0x2a3436, .45, .4),
+  glass: std(0xa9c6cc, .05, .2, { transparent: true, opacity: .32, depthWrite: false }), rail: std(0xbfd8dc, .05, .1, { transparent: true, opacity: .35, depthWrite: false }),
+  kitchen: std(0xf3f1ec, .45), counter: std(0x3b3f40, .4), fabric: std(0xb9ae98, 1), linen: std(0xf2efe8, 1), furn: std(0x9a7350, .7),
+  dark: std(0x33393a, .6), white: std(0xfbfbf9, .3), gold: std(0xdda11b, .4, .3), metal: std(0x9aa3a4, .35, .6), water: std(0x5fb4c6, .08, .1),
+  deck: std(0xc6a479, .8), green: std(0x7f9a68, 1), asphalt: std(0x585b5c, .95), line: std(0xf1efe8, .9), gym: std(0x2e3436, .7),
+};
+const BUILDING_MATS = Object.entries(MAT).filter(([k]) => k !== 'green').map(([, m]) => m);
+const SITE = { ground: std(0xb7c393, 1), plaza: std(0xe2ddd0, .9), sand: std(0xe8dcbc, 1), sea: std(0x4f9fb3, .15, .1), road: std(0x5a5d5e, .95), trunk: std(0x7a5b40, 1), leaf: std(0x5f8a4c, 1) };
+
+class Batch {
+  constructor() { this.m = new Map(); }
+  add(key, w, h, d, x, y, z) { if (w <= 0.001 || h <= 0.001 || d <= 0.001) return; const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z); if (!this.m.has(key)) this.m.set(key, []); this.m.get(key).push(g); }
+  build(group) {
+    for (const [k, arr] of this.m) {
+      const mesh = new THREE.Mesh(mergeGeometries(arr), MAT[k]);
+      mesh.castShadow = !['glass', 'rail', 'water', 'line'].includes(k); mesh.receiveShadow = true;
+      group.add(mesh); arr.forEach(g => g.dispose());
+    }
+  }
+}
+
+/* local unit coords → world */
+function L2W(slot, lx, lz) {
+  if (slot.side === 's') return [slot.x0 + lx, -9 + lz];
+  if (slot.side === 'n') return [slot.x0 + lx, 9 - lz];
+  return slot.x0 === -18 ? [-18 + lx, -9 + lz] : [18 - lx, -9 + lz];
+}
+function wbox(B, slot, key, lx0, lx1, y0, y1, lz0, lz1) {
+  const [ax, az] = L2W(slot, lx0, lz0), [bx, bz] = L2W(slot, lx1, lz1);
+  B.add(key, Math.abs(bx - ax), y1 - y0, Math.abs(bz - az), (ax + bx) / 2, (y0 + y1) / 2, (az + bz) / 2);
+}
+
+function buildUnitInterior(B, slot, e) {
+  const t = TYPES[slot.type], W = t.w, D = t.d;
+  const fb = (key, cx, cz, sx, sz, h, y0 = 0) => wbox(B, slot, key, cx - sx / 2, cx + sx / 2, e + y0, e + y0 + h, cz - sz / 2, cz + sz / 2);
+  t.rooms.forEach(r => wbox(B, slot, r.k === 'bano' ? 'tile' : r.k === 'gym' ? 'gym' : ['lobby', 'local', 'pasillo'].includes(r.k) ? 'corr' : 'wood', r.x0, r.x1, e, e + 0.03, r.z0, r.z1));
+  // walls
+  const segs = {};
+  t.rooms.forEach(r => [['x', r.x0, r.z0, r.z1], ['x', r.x1, r.z0, r.z1], ['z', r.z0, r.x0, r.x1], ['z', r.z1, r.x0, r.x1]]
+    .forEach(([ax, c, a, b]) => { (segs[ax + c] ||= { ax, c, list: [] }).list.push({ a, b, r }); }));
+  const OPEN = new Set(['sala', 'cocina', 'estudio', 'lobby', 'gym', 'cowork', 'local']);
+  let doorDone = false;
+  Object.values(segs).forEach(({ ax, c, list }) => {
+    const facade = ax === 'z' && (c === 0 || (slot.side === 'full' && c === D));
+    if (facade) return;
+    if (ax === 'x' && (c === 0 || c === W)) { const [wx] = L2W(slot, c, 0); if (Math.abs(Math.abs(wx) - 18) < 0.01) return; }
+    const entry = slot.side === 'full' ? (ax === 'x' && c === W) : (ax === 'z' && c === D);
+    const pts = [...new Set(list.flatMap(s => [s.a, s.b]))].sort((p, q) => p - q);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p = pts[i], q = pts[i + 1];
+      const rs = list.filter(s => s.a <= p && s.b >= q).map(s => s.r);
+      if (!rs.length) continue;
+      if (rs.length === 2 && rs.every(r => OPEN.has(r.k))) continue;
+      let door = 0;
+      if (rs.length === 2 && q - p >= 1.6) door = 0.9;
+      if (rs.length === 1 && entry && !doorDone && q - p >= 1.4 && (OPEN.has(rs[0].k) || rs[0].k === 'pasillo')) { door = rs[0].k === 'lobby' ? 3 : 1.0; doorDone = true; }
+      const parts = door ? [[p, (p + q) / 2 - door / 2], [(p + q) / 2 + door / 2, q]] : [[p, q]];
+      parts.forEach(([s, en]) => {
+        if (en - s < 0.05) return;
+        if (ax === 'x') wbox(B, slot, 'wall', c - 0.06, c + 0.06, e, e + H, s, en);
+        else wbox(B, slot, 'wall', s, en, e, e + H, c - 0.06, c + 0.06);
+      });
+    }
+  });
+  // furniture
+  t.rooms.forEach(r => {
+    const cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, w = r.x1 - r.x0, d = r.z1 - r.z0;
+    if (r.k === 'sala') {
+      if (w >= 4 && d >= 4) {
+        fb('fabric', cx, r.z0 + 2.6, Math.min(w - 1.6, 2.6), 0.9, 0.8);
+        fb('furn', cx, r.z0 + 1.5, 1.1, 0.6, 0.4);
+        fb('furn', cx, r.z1 - 1.4, 1.8, 0.9, 0.75);
+      } else fb('furn', cx, cz, Math.min(w - 1, 1.6), 0.9, 0.75);
+    } else if (r.k === 'cocina') {
+      fb('kitchen', cx, r.z1 - 0.35, w - 0.3, 0.6, 0.9); fb('counter', cx, r.z1 - 0.35, w - 0.3, 0.62, 0.04, 0.9);
+      if (w >= 5) fb('kitchen', cx, cz - 0.4, 2.2, 0.9, 0.9);
+    } else if (r.k === 'hab' || r.k === 'estudio') {
+      const bw = r.main ? 1.8 : r.k === 'estudio' ? 1.5 : 1.2;
+      fb('linen', cx, r.z1 - 1.15, bw, 2.0, 0.5); fb('furn', cx, r.z1 - 0.1, bw + 0.1, 0.08, 1.0);
+      if (r.k === 'estudio') fb('fabric', cx, r.z0 + 1.1, 2.0, 0.85, 0.8);
+      if (r.main && w >= 5) fb('furn', r.x0 + 0.4, cz, 0.6, Math.min(d - 1, 2), 2.1);
+    } else if (r.k === 'bano') {
+      fb('white', r.x0 + 0.45, r.z1 - 0.45, 0.42, 0.65, 0.42); fb('kitchen', cx + 0.2, r.z0 + 0.35, Math.min(w - 0.7, 1.2), 0.5, 0.85);
+    } else if (r.k === 'vestidor') { fb('furn', r.x0 + 0.35, cz, 0.55, d - 0.6, 2.2); fb('furn', r.x1 - 0.35, cz, 0.55, d - 0.6, 2.2); }
+    else if (r.k === 'local') { fb('counter', cx + 2, r.z1 - 1.2, 3.2, 0.7, 1.05); for (let i = 0; i < 3; i++) fb('furn', r.x0 + 2 + i * 2.6, r.z0 + 2.2, 0.8, 0.8, 0.75); }
+    else if (r.k === 'lobby') { fb('gold', cx, r.z1 - 2.2, 3.4, 0.8, 1.1); fb('fabric', cx - 3.5, r.z0 + 2.2, 2.4, 0.9, 0.8); fb('fabric', cx + 3.5, r.z0 + 2.2, 2.4, 0.9, 0.8); fb('furn', cx, r.z0 + 2.2, 1.2, 0.8, 0.4); fb('green', r.x0 + 0.8, r.z1 - 0.8, 0.8, 0.8, 1.6); }
+    else if (r.k === 'gym') { for (let i = 0; i < 4; i++) { fb('dark', r.x0 + 2 + i * 2.6, r.z0 + 1.6, 0.8, 1.8, 1.3); } fb('metal', r.x0 + 6, r.z1 - 1.5, 4, 0.5, 2); }
+    else if (r.k === 'cowork') { for (let i = 0; i < 3; i++) { fb('furn', r.x0 + 3 + i * 4.2, cz, 2.6, 1.2, 0.75); } fb('fabric', r.x1 - 1.5, r.z0 + 1.2, 2.2, 0.9, 0.8); }
+  });
+}
+
+/* ================= BUILD ================= */
+const levelGroups = {}, unitGlass = [], zonePlates = [], people = [];
+const glassTint = id => std(0xa9c6cc, .1, .1, { transparent: true, opacity: .55, depthWrite: false });
+const HIDE = new THREE.MeshBasicMaterial({ visible: false });
+const SHIRTS = [0xdd6b4f, 0x3f6fb5, 0x6f9b5a, 0xd8a33c, 0x8b6bb0, 0x2f4f55, 0xc4c0b4];
+let pid = 0;
+function addPerson(group, e, rect, walkX) {
+  const g = new THREE.Group();
+  const shirt = std(SHIRTS[pid % SHIRTS.length], .9), skin = std([0xe0b58f, 0x9c6b4b, 0xc89470][pid % 3], .8);
+  const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.85, 8), MAT.dark); legs.position.y = 0.43;
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.21, 0.42, 4, 8), shirt); body.position.y = 1.15;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), skin); head.position.y = 1.62;
+  [legs, body, head].forEach(m => { m.castShadow = true; g.add(m); });
+  const p = { g, e, rect, walkX, speed: 0.9 + (pid % 5) * 0.12, target: new THREE.Vector3(), wait: 0, phase: pid };
+  const r = seeded(pid * 13 + 7);
+  p.rand = r;
+  g.position.set(rect[0] + r() * (rect[1] - rect[0]), e, rect[2] + r() * (rect[3] - rect[2]));
+  pickTarget(p);
+  group.add(g); people.push(p); pid++;
+}
+function pickTarget(p) {
+  const r = p.rand;
+  if (p.walkX) p.target.set(p.rect[0] + r() * (p.rect[1] - p.rect[0]), p.e, (p.rect[2] + p.rect[3]) / 2 + (r() - 0.5) * 0.6);
+  else p.target.set(p.rect[0] + r() * (p.rect[1] - p.rect[0]), p.e, p.rect[2] + r() * (p.rect[3] - p.rect[2]));
+}
+function seeded(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function roomRectW(slot, r, pad = 0.6) {
+  const [ax, az] = L2W(slot, r.x0 + pad, r.z0 + pad), [bx, bz] = L2W(slot, r.x1 - pad, r.z1 - pad);
+  return [Math.min(ax, bx), Math.max(ax, bx), Math.min(az, bz), Math.max(az, bz)];
+}
+
+function buildCore(B, e, full) {
+  if (full) B.add('corr', 6, 0.03, 10.2, 0, e + 0.015, -3.9);
+  B.add('core', 0.2, H, 7.8, -3, e + H / 2, 5.1); B.add('core', 0.2, H, 7.8, 3, e + H / 2, 5.1);
+  B.add('core', 6, H, 0.2, 0, e + H / 2, 1.3);
+  B.add('metal', 1.1, 2.2, 0.05, -2.1, e + 1.1, 1.17); B.add('metal', 1.1, 2.2, 0.05, -0.8, e + 1.1, 1.17);
+  B.add('gold', 2.6, 0.06, 0.05, -1.45, e + 2.35, 1.17);
+  B.add('core', 0.15, H, 7.6, 0.2, e + H / 2, 5.1);
+  B.add('dark', 2.8, 0.05, 3.2, -1.5, e + 0.05, 3.3);
+  for (let i = 0; i < 9; i++) B.add('core', 2.4, 0.17 * (i + 1), 0.3, 1.6, e + 0.085 * (i + 1), 2.2 + i * 0.3);
+  B.add('core', 2.4, 0.15, 2, 1.6, e + 1.55, 6.8);
+}
+function buildFacade(B, e, slots, opts = {}) {
+  B.add('slab', 36.6, 0.3, 18.6, 0, e - 0.15, 0);
+  B.add('facade', 0.3, H, 18.2, -18.05, e + H / 2, 0); B.add('facade', 0.3, H, 18.2, 18.05, e + H / 2, 0);
+  for (const sx of [-18.22, 18.22]) { B.add('glass', 0.05, 2.2, 1.6, sx, e + 1.4, 0); B.add('glass', 0.05, 1.6, 2.4, sx, e + 1.6, -5); B.add('glass', 0.05, 1.6, 2.4, sx, e + 1.6, 5); }
+  if (opts.northCore !== false) B.add('facade', 6, H, 0.3, 0, e + H / 2, 9.05);
+  for (let x = -18; x <= 18.01; x += 1.5) { B.add('mullion', 0.06, H, 0.1, x, e + H / 2, -9.02); if (Math.abs(x) >= 3) B.add('mullion', 0.06, H, 0.1, x, e + H / 2, 9.02); }
+  B.add('mullion', 36, 0.08, 0.1, 0, e + H, -9.02); B.add('mullion', 36, 0.08, 0.1, 0, e + H, 9.02);
+  slots.forEach(s => {
+    const t = TYPES[s.type], x0 = s.x0, x1 = s.x0 + t.w;
+    if (opts.balcony && s.side === 's') {
+      B.add('slab', t.w - 0.3, 0.22, 1.8, (x0 + x1) / 2, e - 0.11, -9.95);
+      B.add('rail', t.w - 0.3, 1.0, 0.03, (x0 + x1) / 2, e + 0.5, -10.8);
+      B.add('mullion', t.w - 0.3, 0.05, 0.06, (x0 + x1) / 2, e + 1.02, -10.8);
+    }
+  });
+}
+function glassFor(group, slot, e, unit) {
+  const t = TYPES[slot.type], x0 = slot.x0, x1 = slot.x0 + t.w;
+  const zs = slot.side === 'full' ? [-9, 9] : [slot.side === 's' ? -9 : 9];
+  const mat = unit ? glassTint() : MAT.glass;
+  zs.forEach(z => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(t.w - 0.1, H - 0.1, 0.05), mat);
+    m.position.set((x0 + x1) / 2, e + H / 2, z); m.renderOrder = 2;
+    if (unit) { m.userData.unit = unit.id; unitGlass.push(m); }
+    group.add(m);
+  });
+  if (unit) {
+    unit.glassMat = mat;
+    const zm = std(0x3f9d6b, .9, 0, { transparent: true, opacity: .45, depthWrite: false });
+    const [ax, az] = L2W(slot, 0.15, 0.15), [bx, bz] = L2W(slot, t.w - 0.15, t.d - 0.15);
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(bx - ax), 0.05, Math.abs(bz - az)), zm);
+    plate.position.set((ax + bx) / 2, e + 0.06, (az + bz) / 2); plate.userData.unit = unit.id; plate.renderOrder = 3;
+    group.add(plate); zonePlates.push(plate);
+    // volumen sin tapa: paredes y piso de la unidad teñidos por estado cuando el piso está cortado
+    const vm = std(0x3f9d6b, .9, 0, { transparent: true, opacity: .32, depthWrite: false, side: THREE.DoubleSide });
+    const vol = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(bx - ax), H * 0.9, Math.abs(bz - az)), [vm, vm, HIDE, HIDE, vm, vm]);
+    vol.position.set((ax + bx) / 2, e + H * 0.45 + 0.05, (az + bz) / 2); vol.renderOrder = 3; vol.visible = false; group.add(vol);
+    Object.assign(unit, { zoneMat: zm, plate, vol, volMat: vm, center: new THREE.Vector3((ax + bx) / 2, e, (az + bz) / 2) });
+  }
+}
+
+LEVELS.forEach(L => {
+  const g = new THREE.Group(); g.userData.level = L.id; scene.add(g); levelGroups[L.id] = g;
+  const B = new Batch(), e = L.elev;
+  if (L.id === 'P') {
+    B.add('asphalt', 36, 0.3, 18, 0, e - 0.15, 0);
+    B.add('core', 36.4, FH, 0.3, 0, e + FH / 2, -9.05); B.add('core', 36.4, FH, 0.3, 0, e + FH / 2, 9.05);
+    B.add('core', 0.3, FH, 18, -18.05, e + FH / 2, 0); B.add('core', 0.3, FH, 18, 18.05, e + FH / 2, 0);
+    for (let x = -12; x <= 12; x += 6) for (const z of [-4, 4]) B.add('core', 0.5, FH, 0.5, x, e + FH / 2, z);
+    const carCols = ['white', 'dark', 'metal', 'gold', 'furn'];
+    for (let i = 0; i < 11; i++) {
+      const x = -16 + i * 3.1, z = i % 2 ? -6.2 : 6.2;
+      if (Math.abs(x) < 3.2 && z > 0) continue;
+      B.add('line', 0.1, 0.01, 4.8, x - 1.5, e + 0.01, z);
+      if ((i * 7) % 3 !== 0) { B.add(carCols[i % 5], 1.8, 0.75, 4.3, x, e + 0.5, z); B.add('glass', 1.6, 0.5, 2.2, x, e + 1.1, z); B.add(carCols[i % 5], 1.62, 0.12, 2.3, x, e + 1.4, z); }
+    }
+    buildCore(B, e, false);
+    addPerson(g, e, [-15, 15, -0.8, 0.8], true);
+  } else if (L.id === 'R') {
+    B.add('slab', 36.6, 0.4, 18.6, 0, e - 0.2, 0);
+    B.add('facade', 36.6, 1.1, 0.25, 0, e + 0.55, -9.2); B.add('facade', 36.6, 1.1, 0.25, 0, e + 0.55, 9.2);
+    B.add('facade', 0.25, 1.1, 18.6, -18.2, e + 0.55, 0); B.add('facade', 0.25, 1.1, 18.6, 18.2, e + 0.55, 0);
+    B.add('deck', 22, 0.1, 9, -4, e + 0.05, -3.5);
+    B.add('slab', 12.6, 0.5, 4.6, -6, e + 0.25, -4); B.add('water', 12, 0.08, 4, -6, e + 0.52, -4);
+    for (let i = 0; i < 5; i++) B.add('white', 0.75, 0.35, 1.9, -11 + i * 2.4, e + 0.28, -7.4);
+    for (let i = 0; i < 6; i++) B.add('furn', 0.15, 2.6, 0.15, 6 + (i % 3) * 3, e + 1.3, -6 + Math.floor(i / 3) * 5);
+    for (let i = 0; i < 12; i++) B.add('furn', 0.12, 0.18, 5.4, 5.6 + i * 0.55, e + 2.66, -3.5);
+    B.add('fabric', 3, 0.8, 0.9, 9, e + 0.4, -5); B.add('furn', 1.2, 0.4, 0.7, 9, e + 0.2, -3.6);
+    B.add('core', 6.2, 3, 7.8, 0, e + 1.5, 5.1);
+    B.add('green', 8, 0.6, 1.4, 12, e + 0.3, 7.5); B.add('green', 8, 0.6, 1.4, -12, e + 0.3, 7.5);
+    for (let i = 0; i < 3; i++) addPerson(g, e, [-14, 14, -7.6, 1.5], false);
+  } else {
+    const slots = L.id === 'L0' ? LOBBY_SLOTS : L.id === 'L5' ? PH_SLOTS : TYPICAL;
+    buildFacade(B, e, slots, { balcony: L.floor >= 1, northCore: true });
+    if (L.id !== 'L5') B.add('corr', 36, 0.03, 2.4, 0, e + 0.015, 0);
+    buildCore(B, e, L.id === 'L5');
+    if (L.id === 'L5') { B.add('slab', 36, 0.22, 1.0, 0, e - 0.11, -10.4); }
+    slots.forEach(s => {
+      buildUnitInterior(B, s, e);
+      const unit = UNITS.find(u => u.level === L.id && u.slot === s);
+      glassFor(g, s, e, unit);
+      const t = TYPES[s.type];
+      const openRoom = t.rooms.find(r => ['sala', 'estudio', 'lobby', 'gym', 'cowork', 'local'].includes(r.k));
+      if (openRoom && (pid % 2 === 0 || t.amen)) addPerson(g, e, roomRectW(s, openRoom), false);
+    });
+    if (L.id !== 'L5') { addPerson(g, e, [-16, 16, -0.6, 0.6], true); addPerson(g, e, [-16, 16, -0.6, 0.6], true); }
+    else addPerson(g, e, [-2.2, 2.2, -8, 0.5], false);
+  }
+  B.build(g);
+});
+
+// site
+{
+  const site = new THREE.Group(); scene.add(site);
+  const plane = (w, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.receiveShadow = true; site.add(m); return m; };
+  // ground with a hole for the building footprint
+  plane(7000, 68, SITE.ground, 0, -0.02, -43); plane(7000, 3500, SITE.ground, 0, -0.02, 1759);
+  plane(3482, 18, SITE.ground, -1759, -0.02, 0); plane(3482, 18, SITE.ground, 1759, -0.02, 0);
+  // plaza ring
+  plane(56, 8, SITE.plaza, 0, 0, -13); plane(56, 8, SITE.plaza, 0, 0, 13); plane(10, 18, SITE.plaza, -23, 0, 0); plane(10, 18, SITE.plaza, 23, 0, 0);
+  plane(7000, 12, SITE.road, 0, 0.01, 24);
+  plane(7000, 30, SITE.sand, 0, 0.005, -62);
+  const sea = plane(9000, 5000, SITE.sea, 0, -0.05, -2577);
+  sea.material.transparent = false;
+  const pts = [];
+  for (let x = -26; x <= 26; x += 6.5) { pts.push([x, -17.5]); pts.push([x, 15]); }
+  for (let z = -10; z <= 10; z += 6.5) { pts.push([-26.5, z]); pts.push([26.5, z]); }
+  for (let x = -90; x <= 90; x += 11) pts.push([x, -48 + ((x * 7) % 5)]);
+  const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.18, 0.28, 6, 6), SITE.trunk, pts.length);
+  const crown = new THREE.InstancedMesh(new THREE.ConeGeometry(2.2, 1.6, 7), SITE.leaf, pts.length);
+  const m4 = new THREE.Matrix4();
+  pts.forEach(([x, z], i) => { m4.makeTranslation(x, 3, z); trunk.setMatrixAt(i, m4); m4.makeTranslation(x, 6.3, z); crown.setMatrixAt(i, m4); });
+  trunk.castShadow = crown.castShadow = true; site.add(trunk, crown);
+}
+
+
+
+
+
+/* ================= VIDA EXTERIOR: gente y vehículos ================= */
+const lifeGroup = new THREE.Group(); scene.add(lifeGroup);
+{
+  const walk = new THREE.Mesh(new THREE.PlaneGeometry(260, 1.8), SITE.plaza); walk.rotation.x = -Math.PI / 2; walk.position.set(0, 0.006, 17.3); walk.receiveShadow = true; lifeGroup.add(walk);
+  for (let i = 0; i < 5; i++) addPerson(lifeGroup, 0, [-26, 26, -16.5, -10], false);
+  for (let i = 0; i < 3; i++) addPerson(lifeGroup, 0, [-26, 26, 10.5, 16.2], false);
+  for (let i = 0; i < 4; i++) addPerson(lifeGroup, 0, [-120, 120, 17, 17.6], true);
+  for (let i = 0; i < 6; i++) addPerson(lifeGroup, 0, [-90, 90, -72, -52], false);
+}
+const LANES = [];
+const lane = (ax, az, bx, bz, n, speed) => LANES.push({ ax, az, bx, bz, n, speed, len: Math.hypot(bx - ax, bz - az), yaw: Math.atan2(bx - ax, bz - az) });
+lane(-2800, 21, 2800, 21, 60, 12.5); lane(2800, 27, -2800, 27, 60, 11.5);
+[-430, 540, 1250].forEach(x => { lane(x + 3, 40, x + 3, 2600, 18, 11); lane(x - 3, 2600, x - 3, 40, 18, 10.5); });
+[600, 1200].forEach(z => { lane(-2800, z - 3, 2800, z - 3, 30, 12); lane(2800, z + 3, -2800, z + 3, 30, 11); });
+const cars = [];
+{ const cr = seeded(77); LANES.forEach(L => { for (let i = 0; i < L.n; i++) cars.push({ L, s: (i + cr() * 0.5) / L.n * L.len }); }); }
+const carBody = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 0.8, 4.4).translate(0, 0.7, 0), std(0xffffff, .35, .3), cars.length);
+const carCab = new THREE.InstancedMesh(new THREE.BoxGeometry(1.62, 0.55, 2.3).translate(0, 1.37, -0.25), std(0x1d2a2e, .15, .4), cars.length);
+const CAR_COLS = [0xf2f1ec, 0x2b2f31, 0x9aa3a4, 0x8a2a26, 0x2f4f6f, 0xd9d4c7, 0x24453a, 0xb7b1a3];
+cars.forEach((c, i) => carBody.setColorAt(i, new THREE.Color(CAR_COLS[i % CAR_COLS.length])));
+carBody.frustumCulled = carCab.frustumCulled = false; carBody.receiveShadow = true;
+lifeGroup.add(carBody, carCab);
+const dummy = new THREE.Object3D();
+function updateCars(dt) {
+  const k = state.mode === 'zona' ? 3 : 1;
+  cars.forEach((c, i) => {
+    const L = c.L; c.s = (c.s + L.speed * dt) % L.len;
+    const f = c.s / L.len; dummy.position.set(L.ax + (L.bx - L.ax) * f, 0.02, L.az + (L.bz - L.az) * f);
+    dummy.rotation.set(0, L.yaw, 0); dummy.scale.setScalar(k); dummy.updateMatrix();
+    carBody.setMatrixAt(i, dummy.matrix); carCab.setMatrixAt(i, dummy.matrix);
+  });
+  carBody.instanceMatrix.needsUpdate = carCab.instanceMatrix.needsUpdate = true;
+}
+updateCars(0);
+
+/* ================= i18n ================= */
+let lang = 'es';
+const DICT = {
+  es: {
+    zona: 'Zona', proyecto: 'Proyecto', apto: 'Apto', local: 'Local', ubic: 'Sosúa · Puerto Plata',
+    lema: 'Residencial frente al mar con 28 unidades, a 2 minutos de la playa.', cerca: 'Lo que tienes cerca',
+    verProyecto: 'Ver el proyecto', clickProyecto: 'Ver el proyecto', filtros: 'Filtros', tipo: 'Tipo', vista: 'Vista',
+    precio: 'Precio (USD)', soloDisp: 'Solo disponibles', unidades: 'unidades', limpiar: 'Limpiar', mapa: 'Unidades por nivel',
+    amen: 'Amenidades', volverProyecto: '← Volver al proyecto', hab: 'Hab.', banos: 'Baños', balcon: 'balcón', terraza: 'terraza',
+    piso: 'Piso', planta: 'Planta', renders: 'Renders', v360: 'Vista 360', verVista: 'Ver la vista', salirVista: 'Volver a la unidad',
+    reservar: 'Reservar unidad', noDisp: 'No disponible', reservadoHasta: 'Reservado hasta', arrastra: 'Arrastra para mirar alrededor',
+    volverFicha: '← Volver a la ficha', renderPh: 'Render de Corona', broker: 'Broker', presentar: 'Presentar', salirPres: 'Salir de presentación',
+    corte: 'Corte', xray: 'Rayos X', plantaT: 'Planta', vida: 'Vida', girar: 'Girar', todo: 'Todo', ocultar: 'Ocultar panel', mostrar: 'Filtros',
+    panelTitle: 'Panel del broker', entrar: 'Entrar', correo: 'Correo', clave: 'Contraseña', loginNote: 'Demo: entra con los datos ya escritos.',
+    cUnidad: 'Unidad', cTipo: 'Tipo', cNivel: 'Nivel', cPrecio: 'Precio USD', cEstado: 'Estado', cVence: 'Reserva vence', cCliente: 'Cliente',
+    dias: 'días', venceEn: 'vence en', bkNote: 'Los cambios se ven al momento en el visor. Al vencer una reserva, la unidad vuelve a Disponible. En esta demo no se guardan al recargar.',
+    vencenSemana: 'Reservas que vencen esta semana', porM2: '/ m²', distancia: 'en carro', salirBroker: 'Cerrar',
+    st_disponible: 'Disponible', st_reservado: 'Reservado', st_vendido: 'Vendido',
+    type_ES: 'Estudio', type_2H: '2 habitaciones', type_3H: '3 habitaciones', type_PH: 'Penthouse', type_LC: 'Local comercial',
+    chip_ES: 'Estudio', chip_2H: '2 hab', chip_3H: '3 hab', chip_PH: 'PH', chip_LC: 'Local',
+    vista_mar: 'Mar', vista_jardin: 'Jardín', vista_calle: 'Calle',
+    lvl_P: 'Parqueo', lvl_L0: 'Lobby', lvl_L1: 'Piso 1', lvl_L2: 'Piso 2', lvl_L3: 'Piso 3', lvl_L4: 'Piso 4', lvl_L5: 'Penthouse', lvl_R: 'Azotea',
+    am_pool: 'Piscina en azotea', am_gym: 'Gimnasio', am_cowork: 'Coworking', am_lobby: 'Lobby', libres: 'libres', planNote: 'FACHADA SUR · MAR',
+  },
+  en: {
+    zona: 'Area', proyecto: 'Project', apto: 'Apt', local: 'Shop', ubic: 'Sosúa · Puerto Plata',
+    lema: 'Beachfront residence with 28 units, 2 minutes from the beach.', cerca: 'What is nearby',
+    verProyecto: 'View the project', clickProyecto: 'View the project', filtros: 'Filters', tipo: 'Type', vista: 'View',
+    precio: 'Price (USD)', soloDisp: 'Available only', unidades: 'units', limpiar: 'Clear', mapa: 'Units by level',
+    amen: 'Amenities', volverProyecto: '← Back to the project', hab: 'Beds', banos: 'Baths', balcon: 'balcony', terraza: 'terrace',
+    piso: 'Floor', planta: 'Floor plan', renders: 'Renders', v360: '360° view', verVista: 'See the view', salirVista: 'Back to the unit',
+    reservar: 'Reserve unit', noDisp: 'Not available', reservadoHasta: 'Reserved until', arrastra: 'Drag to look around',
+    volverFicha: '← Back to unit details', renderPh: 'Corona render', broker: 'Broker', presentar: 'Present', salirPres: 'Exit presentation',
+    corte: 'Section', xray: 'X-ray', plantaT: 'Plan', vida: 'Life', girar: 'Rotate', todo: 'All', ocultar: 'Hide panel', mostrar: 'Filters',
+    panelTitle: 'Broker panel', entrar: 'Sign in', correo: 'Email', clave: 'Password', loginNote: 'Demo: sign in with the prefilled details.',
+    cUnidad: 'Unit', cTipo: 'Type', cNivel: 'Level', cPrecio: 'Price USD', cEstado: 'Status', cVence: 'Reservation ends', cCliente: 'Client',
+    dias: 'days', venceEn: 'ends in', bkNote: 'Changes show in the viewer right away. When a reservation ends, the unit goes back to Available. This demo does not keep changes after reloading.',
+    vencenSemana: 'Reservations ending this week', porM2: '/ m²', distancia: 'by car', salirBroker: 'Close',
+    st_disponible: 'Available', st_reservado: 'Reserved', st_vendido: 'Sold',
+    type_ES: 'Studio', type_2H: '2 bedrooms', type_3H: '3 bedrooms', type_PH: 'Penthouse', type_LC: 'Retail unit',
+    chip_ES: 'Studio', chip_2H: '2 bed', chip_3H: '3 bed', chip_PH: 'PH', chip_LC: 'Retail',
+    vista_mar: 'Sea', vista_jardin: 'Garden', vista_calle: 'Street',
+    lvl_P: 'Parking', lvl_L0: 'Lobby', lvl_L1: 'Floor 1', lvl_L2: 'Floor 2', lvl_L3: 'Floor 3', lvl_L4: 'Floor 4', lvl_L5: 'Penthouse', lvl_R: 'Rooftop',
+    am_pool: 'Rooftop pool', am_gym: 'Gym', am_cowork: 'Coworking', am_lobby: 'Lobby', libres: 'free', planNote: 'SOUTH FACADE · SEA',
+  },
+};
+const t = k => DICT[lang][k] ?? DICT.es[k] ?? k;
+const ROOMS_EN = { 'Sala': 'Living', 'Sala-comedor': 'Living-dining', 'Comedor': 'Dining', 'Cocina': 'Kitchen', 'Hab. principal': 'Main bedroom', 'Hab. 2': 'Bedroom 2', 'Hab. 3': 'Bedroom 3', 'Baño': 'Bathroom', 'Baño 2': 'Bathroom 2', 'Baño principal': 'Main bathroom', 'Medio baño': 'Half bath', 'Vestidor': 'Walk-in closet', 'Pasillo': 'Hall', 'Estudio': 'Studio', 'Local': 'Shop', 'Depósito': 'Storage' };
+const tr = n => (lang === 'en' ? ROOMS_EN[n] || n : n);
+const lvlName = id => t('lvl_' + id);
+const unitName = u => (u.type === 'LC' ? t('local') + ' ' + u.slot.code.slice(1) : t('apto') + ' ' + u.num);
+const fmtK = v => 'USD ' + (v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : Math.round(v / 1000) + 'K');
+const DAY = 864e5;
+const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const fmtDate = ms => new Date(ms).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-DO', { day: 'numeric', month: 'short' });
+const daysLeft = ms => Math.round((ms - today()) / DAY);
+const hexCss = h => '#' + new THREE.Color(h).getHexString();
+
+STATUS.vendido.hex = 0x8e8a82;
+/* datos extra de ejemplo: vista, reservas y clientes */
+UNITS.forEach((u, i) => {
+  u.vista = u.type === 'LC' ? 'calle' : u.slot.side === 'n' ? 'jardin' : 'mar';
+  u.vence = null; u.cliente = '';
+});
+[12, 3, 20, 25, 8].forEach((d, i) => { const u = UNITS.filter(x => x.status === 'reservado')[i]; if (u) { u.vence = today() + d * DAY; u.cliente = 'Cliente demo ' + (i + 1); } });
+UNITS.filter(u => u.status === 'vendido').forEach((u, i) => { u.cliente = 'Comprador demo ' + (i + 1); });
+function checkExpired() { UNITS.forEach(u => { if (u.status === 'reservado' && u.vence && u.vence < today()) { u.status = 'disponible'; u.vence = null; u.cliente = ''; } }); }
+checkExpired();
+const PRICE_MIN = Math.floor(Math.min(...UNITS.map(u => u.price)) / 10000) * 10000;
+const PRICE_MAX = Math.ceil(Math.max(...UNITS.map(u => u.price)) / 10000) * 10000;
+state.f.pmin = PRICE_MIN; state.f.pmax = PRICE_MAX;
+
+/* ================= ZONA: mapa del entorno ================= */
+scene.fog = new THREE.Fog(new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--sky-bottom').trim() || '#eceae3'), 1400, 6500);
+Object.assign(DICT.es, { cat_edu: 'Educación', cat_tiendas: 'Tiendas', cat_salud: 'Salud', cat_ocio: 'Playa y ocio', cat_trans: 'Transporte',
+  todasRutas: 'Ver todas las rutas', rutaHint: 'Toca un lugar para ver la ruta desde el proyecto.', hora: 'Hora', clima: 'Clima',
+  w_sol: 'Soleado', w_nublado: 'Nublado', w_niebla: 'Niebla', w_lluvia: 'Lluvia' });
+Object.assign(DICT.en, { cat_edu: 'Education', cat_tiendas: 'Shopping', cat_salud: 'Health', cat_ocio: 'Beach and leisure', cat_trans: 'Transport',
+  todasRutas: 'Show all routes', rutaHint: 'Tap a place to see the route from the project.', hora: 'Time', clima: 'Weather',
+  w_sol: 'Sunny', w_nublado: 'Cloudy', w_niebla: 'Fog', w_lluvia: 'Rain' });
+const CATS = [{ k: 'ocio', hex: 0x1f9bb0 }, { k: 'edu', hex: 0x3f6fb5 }, { k: 'tiendas', hex: 0x2f8a5f }, { k: 'salud', hex: 0xc9483b }, { k: 'trans', hex: 0x8b5cc0 }];
+const CAT = Object.fromEntries(CATS.map(c => [c.k, c]));
+const CAT_ICONS = {
+  ocio: '<path d="M3 12a9 9 0 0 1 18 0z"/><path d="M12 12v8"/><path d="M4 21h16"/>',
+  edu: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/>',
+  tiendas: '<path d="M3 4h2l2.5 11h11L21 8H6.5"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>',
+  salud: '<path d="M9.5 3h5v6.5H21v5h-6.5V21h-5v-6.5H3v-5h6.5z"/>',
+  trans: '<rect x="5" y="3" width="14" height="14" rx="2"/><path d="M5 10h14M8 21v-4M16 21v-4"/>',
+};
+const catSvg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CAT_ICONS[k]}</svg>`;
+/* lugares inventados; r = recorrido por las calles desde el proyecto */
+const POIS = [
+  { cat: 'ocio', es: 'Playa', en: 'Beach', min: 2, x: 140, z: -64, r: [[0, -12], [0, -46], [140, -64]] },
+  { cat: 'ocio', es: 'Malecón y restaurantes', en: 'Boardwalk and restaurants', min: 6, x: -620, z: -54, r: [[0, -12], [0, -44], [-620, -44], [-620, -54]] },
+  { cat: 'ocio', es: 'Campo de golf', en: 'Golf course', min: 11, x: 2000, z: 660, r: [[0, 0], [0, 24], [540, 24], [540, 600], [2000, 600], [2000, 660]] },
+  { cat: 'edu', es: 'Colegio internacional', en: 'International school', min: 7, x: 610, z: 400, r: [[0, 0], [0, 24], [540, 24], [540, 400], [610, 400]] },
+  { cat: 'edu', es: 'Escuela bilingüe', en: 'Bilingual school', min: 8, x: -500, z: 800, r: [[0, 0], [0, 24], [-430, 24], [-430, 800], [-500, 800]] },
+  { cat: 'edu', es: 'Universidad', en: 'University', min: 14, x: 1320, z: 1500, r: [[0, 0], [0, 24], [1250, 24], [1250, 1500], [1320, 1500]] },
+  { cat: 'tiendas', es: 'Supermercado', en: 'Supermarket', min: 4, x: -500, z: 260, r: [[0, 0], [0, 24], [-430, 24], [-430, 260], [-500, 260]] },
+  { cat: 'tiendas', es: 'Plaza comercial', en: 'Shopping mall', min: 10, x: 610, z: 1300, r: [[0, 0], [0, 24], [540, 24], [540, 1300], [610, 1300]] },
+  { cat: 'tiendas', es: 'Mercado local', en: 'Local market', min: 9, x: -1100, z: 670, r: [[0, 0], [0, 24], [-430, 24], [-430, 600], [-1100, 600], [-1100, 670]] },
+  { cat: 'salud', es: 'Farmacia', en: 'Pharmacy', min: 2, x: 260, z: 110, r: [[0, 0], [0, 24], [260, 24], [260, 110]] },
+  { cat: 'salud', es: 'Clínica 24 horas', en: '24-hour clinic', min: 6, x: -800, z: 170, r: [[0, 0], [0, 24], [-800, 24], [-800, 170]] },
+  { cat: 'salud', es: 'Hospital', en: 'Hospital', min: 12, x: -360, z: 1850, r: [[0, 0], [0, 24], [-430, 24], [-430, 1850], [-360, 1850]] },
+  { cat: 'trans', es: 'Parada de guaguas', en: 'Bus stop', min: 1, x: -170, z: 70, r: [[0, 0], [0, 24], [-170, 24], [-170, 70]] },
+  { cat: 'trans', es: 'Terminal de autobuses', en: 'Bus terminal', min: 9, x: -1500, z: 1270, r: [[0, 0], [0, 24], [-430, 24], [-430, 1200], [-1500, 1200], [-1500, 1270]] },
+  { cat: 'trans', es: 'Aeropuerto internacional', en: 'International airport', min: 15, x: 1330, z: 2450, r: [[0, 0], [0, 24], [1250, 24], [1250, 2450], [1330, 2450]] },
+];
+const ROAD_NAMES = [
+  { n: 'Carretera Sosúa – Cabarete', x: -1250, z: 24 }, { n: 'Calle Pedro Clisante', x: -430, z: 1450 },
+  { n: 'Calle Duarte', x: 540, z: 950 }, { n: 'Av. del Aeropuerto', x: 1250, z: 2050 },
+  { n: 'Calle Alejo Martínez', x: -1900, z: 600 }, { n: 'Calle Principal', x: 2150, z: 1200 },
+];
+Object.assign(state, { cats: new Set(CATS.map(c => c.k)), allRoutes: false, hour: 16.25, weather: 'sol' });
+const segDist = (x, z, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1; const k = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2)); return Math.hypot(x - ax - k * dx, z - az - k * dz); };
+const nearRoute = (x, z, pad) => POIS.some(p => p.r.some((q, i) => i > 0 && segDist(x, z, p.r[i - 1][0], p.r[i - 1][1], q[0], q[1]) < pad));
+const zonaGroup = new THREE.Group(); scene.add(zonaGroup);
+{
+  const town = new THREE.Group(); scene.add(town);
+  const flat = (w, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); town.add(m); };
+  const ROADS = [[-436, -424, 30, 2600], [534, 546, 30, 2600], [1244, 1256, 30, 2600], [-3000, 3000, 594, 606], [-3000, 3000, 1194, 1206]];
+  ROADS.forEach(([x0, x1, z0, z1]) => flat(x1 - x0, z1 - z0, SITE.road, (x0 + x1) / 2, 0.02, (z0 + z1) / 2));
+  const nearRoad = (x, z) => ROADS.some(([x0, x1, z0, z1]) => x > x0 - 16 && x < x1 + 16 && z > z0 - 16 && z < z1 + 16) || Math.abs(z - 24) < 20;
+  const r = seeded(42), blocks = [];
+  for (let i = 0; i < 1600 && blocks.length < 950; i++) {
+    const x = -2600 + r() * 5200, z = 45 + r() * 2500;
+    if ((Math.abs(x) < 90 && z < 90) || nearRoad(x, z) || POIS.some(p => Math.hypot(p.x - x, p.z - z) < 40) || nearRoute(x, z, 26)) continue;
+    blocks.push([x, z, 10 + r() * 16, 3.5 + r() * 9, 10 + r() * 16, r()]);
+  }
+  const bi = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), std(0xffffff, .9), blocks.length);
+  const m4 = new THREE.Matrix4(), col = new THREE.Color();
+  blocks.forEach(([x, z, w, h, d, c], i) => { m4.makeScale(w, h, d).setPosition(x, h / 2, z); bi.setMatrixAt(i, m4); bi.setColorAt(i, col.setHSL(0.09, 0.18, 0.82 + c * 0.12)); });
+  town.add(bi);
+  const trees = [];
+  for (let i = 0; i < 2500 && trees.length < 900; i++) { const x = -2600 + r() * 5200, z = 40 + r() * 2500; if ((Math.abs(x) < 60 && z < 60) || nearRoad(x, z) || nearRoute(x, z, 14)) continue; trees.push([x, z, 4 + r() * 4]); }
+  const ti = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), std(0x6f915a, 1), trees.length);
+  trees.forEach(([x, z, s], i) => { m4.makeScale(s, s, s).setPosition(x, s, z); ti.setMatrixAt(i, m4); });
+  town.add(ti);
+  POIS.forEach(p => {
+    const m = std(CAT[p.cat].hex, .5);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 56, 8), m); pole.position.set(p.x, 28, p.z);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(8, 16, 12), m); head.position.set(p.x, 60, p.z);
+    const pin = new THREE.Group(); pin.add(pole, head); zonaGroup.add(pin); p.pin = pin;
+  });
+  const goldMat = std(0xdda11b, .4, .2);
+  const ppole = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 110, 8), goldMat); ppole.position.set(0, 80, 0);
+  const phead = new THREE.Mesh(new THREE.SphereGeometry(16, 20, 14), goldMat); phead.position.set(0, 138, 0);
+  zonaGroup.add(ppole, phead);
+  [500, 1000].forEach(rad => {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(rad - 5, rad + 5, 160), new THREE.MeshBasicMaterial({ color: 0x132f33, transparent: true, opacity: .25, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.8; zonaGroup.add(ring);
+  });
+}
+/* rutas: cinta de color sobre las calles que se dibuja de a poco, con un punto que la recorre */
+const WHITE = new THREE.Color(0xffffff);
+const routes = POIS.map((p, ri) => {
+  const W = 16, Y = 6 + ri * 0.6, STEP = 10, pts = p.r.map(([x, z]) => new THREE.Vector2(x, z)), pos = [];
+  const quad = (ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz) || 1, px = -dz / l * W / 2, pz = dx / l * W / 2;
+    pos.push(ax + px, Y, az + pz, ax - px, Y, az - pz, bx + px, Y, bz + pz, bx + px, Y, bz + pz, ax - px, Y, az - pz, bx - px, Y, bz - pz); };
+  let len = 0; const cum = [0];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const A = pts[i], B = pts[i + 1], d = B.clone().sub(A), L = d.length(); d.normalize();
+    const n = Math.max(1, Math.ceil(L / STEP));
+    for (let j = 0; j < n; j++) {
+      const a = A.clone().addScaledVector(d, L * j / n - (j === 0 ? W / 2 : 0)), b = A.clone().addScaledVector(d, L * (j + 1) / n + (j === n - 1 ? W / 2 : 0));
+      quad(a.x, a.y, b.x, b.y);
+    }
+    len += L; cum.push(len);
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: CAT[p.cat].hex, side: THREE.DoubleSide }));
+  mesh.renderOrder = 4; mesh.visible = false; mesh.frustumCulled = false; zonaGroup.add(mesh);
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(11, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffffff })); dot.visible = false; zonaGroup.add(dot);
+  return { p, mesh, dot, pts, cum, len, quads: pos.length / 18, k: 1 };
+});
+function routeAt(r, s, out) {
+  const P = r.pts; let i = 0; while (i < P.length - 2 && r.cum[i + 1] < s) i++;
+  const f = (s - r.cum[i]) / Math.max(r.cum[i + 1] - r.cum[i], 1e-6);
+  out.set(P[i].x + (P[i + 1].x - P[i].x) * f, 14, P[i].y + (P[i + 1].y - P[i].y) * f);
+}
+function updateRoutes(dt, time) {
+  const zona = state.mode === 'zona';
+  routes.forEach((r, i) => {
+    const sel = state.poi === i, show = zona && state.cats.has(r.p.cat) && (sel || state.allRoutes);
+    r.mesh.visible = show; r.dot.visible = false;
+    if (!show) return;
+    if (r.k < 1) r.k = reduceMotion ? 1 : Math.min(1, r.k + dt / 1.6);
+    r.mesh.geometry.setDrawRange(0, Math.ceil(r.quads * r.k) * 6);
+    r.mesh.material.color.setHex(CAT[r.p.cat].hex);
+    if (!sel && state.poi !== null) r.mesh.material.color.lerp(WHITE, .55);
+    if (r.k >= 1 && (sel || state.poi === null)) { r.dot.visible = true; routeAt(r, ((reduceMotion ? 0 : time) * 170 + i * 300) % r.len, r.dot.position); }
+  });
+}
+
+/* ================= HORA Y CLIMA ================= */
+let NIGHT = 0;
+const WEATHER = ['sol', 'nublado', 'niebla', 'lluvia'];
+const W_ICONS = {
+  sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  nublado: '<path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 18z"/>',
+  niebla: '<path d="M4 8h16M3 12h18M5 16h14M8 20h8"/>',
+  lluvia: '<path d="M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 14z"/><path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3"/>',
+};
+const C = h => new THREE.Color(h);
+const SKY = { dayTop: C(0x9fc6d8), dayBot: C(0xeef0ea), nightTop: C(0x081322), nightBot: C(0x1d2c42), warmTop: C(0xb7a3b4), warmBot: C(0xf4b07a), greyTop: C(0x98a2a6), greyBot: C(0xc9cdcb) };
+const WX = {
+  sol: { sun: 1, grey: 0, fogZ: [1400, 6500], fogO: [600, 5000] },
+  nublado: { sun: .32, grey: .65, fogZ: [900, 5200], fogO: [300, 3000] },
+  niebla: { sun: .22, grey: .9, fogZ: [150, 2300], fogO: [8, 140] },
+  lluvia: { sun: .14, grey: .85, fogZ: [500, 3800], fogO: [70, 800] },
+};
+const smooth = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+const fmtHour = h => { const hh = Math.floor(h), mm = Math.round((h - hh) * 60); return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0'); };
+const WET = [SITE.road, MAT.asphalt, SITE.plaza, MAT.deck], DRY = WET.map(m => m.roughness);
+const RN = 2600, rainPos = new Float32Array(RN * 6), rainSeed = new Float32Array(RN * 3);
+{ const r = seeded(9); for (let i = 0; i < RN; i++) { rainSeed[i * 3] = r() - .5; rainSeed[i * 3 + 1] = r(); rainSeed[i * 3 + 2] = r() - .5; } }
+const rainGeo = new THREE.BufferGeometry(); rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xd6e0e4, transparent: true, opacity: .5, depthWrite: false }));
+rain.frustumCulled = false; rain.visible = false; scene.add(rain);
+function updateRain(dt) {
+  const S = THREE.MathUtils.clamp(camera.position.distanceTo(controls.target) * 1.2, 30, 2600);
+  rain.position.copy(controls.target); rain.position.y -= S * .35; rain.scale.setScalar(S);
+  for (let i = 0; i < RN; i++) {
+    let y = rainSeed[i * 3 + 1] - dt * 1.1; if (y < 0) y += 1; rainSeed[i * 3 + 1] = y;
+    const x = rainSeed[i * 3], z = rainSeed[i * 3 + 2], o = i * 6;
+    rainPos[o] = x; rainPos[o + 1] = y; rainPos[o + 2] = z; rainPos[o + 3] = x - .004; rainPos[o + 4] = y + .03; rainPos[o + 5] = z;
+  }
+  rainGeo.attributes.position.needsUpdate = true;
+}
+let ENV_MATS = null;
+function applySky() {
+  if (!ENV_MATS) { const set = new Set(); scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { if ('envMapIntensity' in m) set.add(m); }); }); ENV_MATS = [...set]; }
+  const w = WX[state.weather], a = Math.PI * (state.hour - 6) / 12, elev = Math.sin(a);
+  const day = smooth(-0.12, 0.28, elev), warm = (1 - smooth(0.05, 0.5, elev)) * day;
+  NIGHT = 1 - smooth(-0.1, 0.12, elev);
+  sun.position.set(Math.cos(a) * 90, Math.max(elev, 0.06) * 100, -55);
+  sun.color.setHex(0xfff3df).lerp(C(0xff9a52), warm * 0.85);
+  sun.intensity = 2.4 * day * w.sun;
+  hemi.intensity = 0.12 + 0.55 * day * (w.sun < 1 ? 1.25 : 1);
+  hemi.color.setHex(0xffffff).lerp(C(0x6d86b0), NIGHT * 0.8);
+  renderer.toneMappingExposure = 0.6 + 0.4 * day;
+  const envK = (0.12 + 0.88 * day) * (w.sun < 1 ? 0.85 : 1); ENV_MATS.forEach(m => { m.envMapIntensity = envK; });
+  const top = SKY.nightTop.clone().lerp(SKY.dayTop, day).lerp(SKY.warmTop, warm * .45 * w.sun);
+  const bot = SKY.nightBot.clone().lerp(SKY.dayBot, day).lerp(SKY.warmBot, warm * .75 * w.sun);
+  const g = .25 + .75 * day; top.lerp(SKY.greyTop.clone().multiplyScalar(g), w.grey); bot.lerp(SKY.greyBot.clone().multiplyScalar(g), w.grey);
+  document.body.style.background = `linear-gradient(180deg, #${top.getHexString()}, #${bot.getHexString()})`;
+  scene.fog.color.copy(bot);
+  const [n, f] = state.mode === 'zona' ? w.fogZ : w.fogO; scene.fog.near = n; scene.fog.far = f;
+  MAT.glass.emissive.setHex(0xffc27a); MAT.glass.emissiveIntensity = NIGHT * 0.6;
+  WET.forEach((m, i) => { m.roughness = state.weather === 'lluvia' ? 0.28 : DRY[i]; m.metalness = state.weather === 'lluvia' ? 0.25 : 0; });
+  rain.visible = state.weather === 'lluvia' && state.mode !== 'v360';
+}
+
+/* ================= CÁMARA ================= */
+let tween = null;
+function orbitPos(target, dist, azDeg, polDeg) {
+  const az = THREE.MathUtils.degToRad(azDeg), pol = THREE.MathUtils.degToRad(polDeg);
+  return new THREE.Vector3(Math.sin(pol) * Math.sin(az), Math.cos(pol), Math.sin(pol) * Math.cos(az)).multiplyScalar(dist).add(target);
+}
+function flyTo(pos, target, instant, dur = 0.9) {
+  if (instant || reduceMotion) { camera.position.copy(pos); controls.target.copy(target); camera.lookAt(target); tween = null; return; }
+  tween = { t: 0, dur, fp: camera.position.clone(), ft: controls.target.clone(), tp: pos, tt: target };
+}
+controls.addEventListener('start', () => { tween = null; });
+const aspectK = () => (camera.aspect < 1 ? 1 / Math.max(camera.aspect, 0.45) : 1);
+const ZT = new THREE.Vector3(150, 0, 950);
+function camZona(instant) { flyTo(orbitPos(ZT, 3550 * aspectK(), 196, 47), ZT.clone(), instant, 2.4); }
+function camHome(instant, dur = 1) { const tg = new THREE.Vector3(0, 7, 0); flyTo(orbitPos(tg, 82 * aspectK(), 212, 64), tg, instant, dur); }
+function camLevel(id) {
+  const e = LEVELS[lvlIdx(id)].elev, tg = new THREE.Vector3(0, e + 0.5, 0);
+  flyTo(state.planta ? orbitPos(tg, 62 * aspectK(), 180, 0.5) : orbitPos(tg, 58 * aspectK(), 205, 50), tg);
+}
+function camUnit(u) {
+  const tg = u.center.clone().setY(u.center.y + 0.6);
+  if (state.planta) return flyTo(orbitPos(tg, 32 * aspectK(), 180, 0.5), tg);
+  flyTo(orbitPos(tg, (u.type === 'PH' ? 48 : 38) * aspectK(), u.slot.side === 'n' ? 20 : 200, 52), tg);
+}
+function camPoi(p) {
+  const xs = p.r.map(q => q[0]).concat(p.x), zs = p.r.map(q => q[1]).concat(p.z);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+  const tg = new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), span = Math.max(x1 - x0, (z1 - z0) * 1.3, 260);
+  flyTo(orbitPos(tg, Math.min(span * 1.9 + 350, 4000) * aspectK(), 196, 46), tg, false, 1.6);
+}
+function setControls(kind) {
+  controls.enableZoom = true; controls.enablePan = true; controls.rotateSpeed = 1; controls.minPolarAngle = 0;
+  if (kind === 'zona') { controls.minDistance = 250; controls.maxDistance = 4200; controls.maxPolarAngle = THREE.MathUtils.degToRad(72); }
+  else if (kind === 'obj') { controls.minDistance = 6; controls.maxDistance = 320; controls.maxPolarAngle = THREE.MathUtils.degToRad(86); }
+  else { controls.minDistance = 0.05; controls.maxDistance = 0.6; controls.enableZoom = false; controls.enablePan = false; controls.rotateSpeed = -0.35; controls.maxPolarAngle = Math.PI - 0.2; controls.minPolarAngle = 0.2; }
+}
+const fpLight = new THREE.PointLight(0xfff2dc, 0, 16, 1.4); scene.add(fpLight);
+function firstPerson(pos, dir) { flyTo(pos, pos.clone().addScaledVector(dir, 0.35), false, 1.3); }
+function camRoom() {
+  const u = unitById[state.sel], rooms = viewRooms(u), r = rooms[state.room] || rooms[0];
+  const [x, z] = L2W(u.slot, (r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2);
+  firstPerson(new THREE.Vector3(x, u.center.y + 1.55, z), new THREE.Vector3(0, 0, u.slot.side === 'n' ? 1 : -1));
+}
+function camBalcon(u) {
+  const south = u.slot.side !== 'n';
+  firstPerson(new THREE.Vector3(u.center.x, u.center.y + 1.6, south ? -10.2 : 8.4), new THREE.Vector3(0, -0.05, south ? -1 : 1));
+}
+const viewRooms = u => TYPES[u.type].rooms.filter(r => r.k !== 'pasillo');
+
+/* ================= MODOS ================= */
+function goZona() { Object.assign(state, { mode: 'zona', level: null, sel: null, balcon: false, planta: false, corte: false, poi: null }); setControls('zona'); refresh(); camZona(); }
+function goProyecto(fromZona) { Object.assign(state, { mode: 'proyecto', level: null, sel: null, balcon: false, planta: false }); setControls('obj'); refresh(); camHome(false, fromZona ? 2.4 : 1); }
+function selectUnit(id) {
+  const u = unitById[id]; if (!u) return;
+  Object.assign(state, { mode: 'unidad', sel: id, level: u.level, balcon: false, hover: null, ftab: state.ftab || 'planta' });
+  setControls('obj'); refresh(); camUnit(u);
+}
+function enter360() { state.mode = 'v360'; state.room = 0; state.balcon = false; setControls('fp'); refresh(); camRoom(); }
+function exit360() { selectUnit(state.sel); }
+function toggleBalcon() {
+  const u = unitById[state.sel]; state.balcon = !state.balcon;
+  if (state.balcon) { setControls('fp'); camBalcon(u); } else { setControls('obj'); camUnit(u); }
+  refresh();
+}
+function setLevel(id) { Object.assign(state, { mode: 'proyecto', level: id, sel: null, balcon: false }); if (id === null) state.planta = false; setControls('obj'); refresh(); id === null ? camHome() : camLevel(id); }
+
+/* ================= ESTADO → ESCENA ================= */
+const tagsHost = $('#tags');
+UNITS.forEach(u => {
+  const el = document.createElement('div'); el.className = 'tag utag'; el.innerHTML = `<i></i><span>${u.short}</span>`; el.hidden = true;
+  tagsHost.appendChild(el); u.tag = el; u.tagPos = u.center.clone().setY(u.center.y + 2.4);
+});
+const poiTags = POIS.map((p, i) => {
+  const el = document.createElement('button'); el.type = 'button'; el.className = 'tag ptag'; el.dataset.poi = i; tagsHost.appendChild(el);
+  return { el, pos: new THREE.Vector3(p.x, 72, p.z) };
+});
+const projTag = document.createElement('button'); projTag.type = 'button'; projTag.className = 'tag projtag'; tagsHost.appendChild(projTag);
+const projTagPos = new THREE.Vector3(0, 175, 0);
+const ringTags = [500, 1000].map(r => { const el = document.createElement('div'); el.className = 'tag rtag'; tagsHost.appendChild(el); return { el, pos: new THREE.Vector3(r * 0.707, 2, r * 0.707), r }; });
+const roadTags = ROAD_NAMES.map(r => { const el = document.createElement('div'); el.className = 'tag rtag road'; el.textContent = r.n; tagsHost.appendChild(el); return { el, pos: new THREE.Vector3(r.x, 2, r.z) }; });
+tagsHost.addEventListener('click', e => {
+  if (e.target.closest('.projtag')) return goProyecto(true);
+  const p = e.target.closest('.ptag'); if (p) focusPoi(Number(p.dataset.poi));
+});
+function focusPoi(i) { state.poi = state.poi === i ? null : i; if (state.poi !== null) routes[i].k = 0; renderPanel(); renderZonaTags(); state.poi === null ? camZona() : camPoi(POIS[i]); }
+function renderZonaTags() {
+  poiTags.forEach((pt, i) => {
+    const p = POIS[i], on = state.poi === i;
+    pt.el.innerHTML = `<span class="ic" style="background:${hexCss(CAT[p.cat].hex)}">${catSvg(p.cat)}</span><span>${p[lang]}</span>${on ? `<small>${p.min} min</small>` : ''}`;
+    pt.el.classList.toggle('on', on); pt.el.setAttribute('aria-label', `${p[lang]} · ${p.min} min`);
+  });
+  projTag.innerHTML = `<b>TORRE MAREA</b><span>${t('clickProyecto')} →</span>`;
+  ringTags.forEach(rt => { rt.el.textContent = (rt.r === 500 ? '≈ 5' : '≈ 10') + ' min ' + t('distancia'); });
+}
+
+function matches(u) {
+  const f = state.f;
+  return (!f.types.size || f.types.has(u.type)) && (!f.vistas.size || f.vistas.has(u.vista)) && u.price >= f.pmin && u.price <= f.pmax && (!f.free || u.status === 'disponible');
+}
+function paint() {
+  const showAll = state.level === null || state.mode === 'v360' || state.balcon;
+  const idx = state.level ? lvlIdx(state.level) : LEVELS.length - 1;
+  LEVELS.forEach((L, i) => { levelGroups[L.id].visible = showAll || state.level === 'R' || (i <= idx && L.id !== 'R'); });
+  const iso = !showAll;
+  const tint = (state.mode === 'proyecto' || state.mode === 'unidad') && !iso && !state.xray && !state.balcon;
+  UNITS.forEach(u => {
+    const on = matches(u), sel = state.sel === u.id, hov = state.hover === u.id;
+    const col = new THREE.Color(on ? STATUS[u.status].hex : 0xbcb8ae);
+    const gm = u.glassMat, zm = u.zoneMat;
+    if (tint) { gm.color.copy(col); gm.opacity = on ? 0.74 : 0.35; gm.emissive.setHex(0xdda11b); gm.emissiveIntensity = sel ? 0.55 : hov ? 0.3 : 0; }
+    else {
+      const lit = NIGHT * (u.id.charCodeAt(u.id.length - 1) % 3 ? 0.9 : 0.12); // de noche, la mayoría de ventanas encendidas
+      gm.color.setHex(0xa9c6cc); gm.opacity = state.xray ? 0.05 : Math.max(0.2, lit * 0.7); gm.emissive.setHex(0xffc27a); gm.emissiveIntensity = lit;
+    }
+    u.plate.visible = state.mode !== 'v360' && !state.balcon && ((iso && u.level === state.level) || (state.xray && !iso && state.mode !== 'zona'));
+    zm.color.copy(col); zm.opacity = sel ? 0.85 : hov ? 0.75 : on ? 0.68 : 0.12;
+    zm.emissive.setHex(0xdda11b); zm.emissiveIntensity = sel ? 0.5 : 0;
+    u.vol.visible = u.plate.visible && iso;
+    const vm = u.volMat; vm.color.copy(col); vm.opacity = sel ? 0.62 : hov ? 0.52 : on ? 0.45 : 0.05; vm.emissive.setHex(0xdda11b); vm.emissiveIntensity = sel ? 0.45 : 0;
+    u.tag.querySelector('i').style.background = hexCss(STATUS[u.status].hex);
+    u.tag.classList.toggle('sel', sel); u.tag.classList.toggle('dim', !on);
+  });
+  zonaGroup.visible = state.mode === 'zona';
+  MAT.glass.opacity = state.xray ? 0.05 : 0.32;
+  MAT.facade.opacity = state.xray ? 0.12 : 1; MAT.facade.depthWrite = !state.xray;
+  MAT.rail.opacity = state.xray ? 0.08 : 0.35;
+  const clip = state.corte && (state.mode === 'proyecto' || state.mode === 'unidad') && !state.balcon ? [cutPlane] : null;
+  [...BUILDING_MATS, ...UNITS.map(u => u.glassMat), ...UNITS.map(u => u.volMat)].forEach(m => { if ((m.clippingPlanes?.length || 0) !== (clip?.length || 0)) { m.clippingPlanes = clip; m.needsUpdate = true; } });
+  people.forEach(p => { p.g.visible = state.vida; });
+  carBody.visible = carCab.visible = state.vida;
+  POIS.forEach(p => { p.pin.visible = state.cats.has(p.cat); });
+  controls.autoRotate = state.girar && (state.mode === 'proyecto' || state.mode === 'zona');
+  fpLight.intensity = state.mode === 'v360' || state.balcon ? 9 : 0;
+}
+
+/* ================= UI ================= */
+const ICONS = {
+  corte: '<path d="M4 20L20 4"/><path d="M4 9V4h5M20 15v5h-5"/>',
+  xray: '<rect x="4" y="4" width="16" height="16" stroke-dasharray="3 3"/><path d="M9 9h6v6H9z"/>',
+  planta: '<rect x="3" y="3" width="18" height="18"/><path d="M3 12h9V3M12 12v9M16 12h5"/>',
+  vida: '<circle cx="12" cy="5" r="2.2"/><path d="M12 8v7M12 15l-3 6M12 15l3 6M7 11h10"/>',
+  girar: '<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/>',
+};
+const svg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">${ICONS[k]}</svg>`;
+function renderCrumbs() {
+  const u = state.sel ? unitById[state.sel] : null;
+  const steps = [['zona', t('zona')], ['proyecto', t('proyecto')], ['unidad', u ? unitName(u) : t('apto') + ' …']];
+  const cur = state.mode === 'v360' ? 2 : ['zona', 'proyecto', 'unidad'].indexOf(state.mode);
+  $('#crumbs').innerHTML = steps.map(([k, n], i) =>
+    `<button class="crumb${i === cur ? ' on' : ''}" type="button" data-crumb="${k}" ${i > cur ? 'disabled' : ''}>${n}</button>`).join('<span class="sep" aria-hidden="true">›</span>');
+}
+$('#crumbs').addEventListener('click', e => {
+  const b = e.target.closest('[data-crumb]'); if (!b || b.classList.contains('on')) return;
+  if (b.dataset.crumb === 'zona') goZona();
+  else if (b.dataset.crumb === 'proyecto') goProyecto(state.mode === 'zona');
+  else if (b.dataset.crumb === 'unidad' && state.sel) exit360();
+});
+function renderRail() {
+  const rail = $('#rail');
+  rail.hidden = !(state.mode === 'proyecto' || state.mode === 'unidad');
+  if (rail.hidden) return;
+  const short = { P: 'P', L0: 'PB', L1: '1', L2: '2', L3: '3', L4: '4', L5: 'PH', R: 'R' };
+  rail.innerHTML = [...LEVELS].reverse().map(L => {
+    const us = UNITS.filter(u => u.level === L.id), free = us.filter(u => u.status === 'disponible').length;
+    return `<button class="lvl" type="button" data-level="${L.id}" aria-pressed="${state.level === L.id}" title="${lvlName(L.id)}${us.length ? ` · ${free}/${us.length} ${t('libres')}` : ''}"><b>${short[L.id]}</b>${us.length ? `<small>${free}/${us.length}</small>` : '<small>&nbsp;</small>'}</button>`;
+  }).join('') + `<button class="lvl" type="button" data-level="" aria-pressed="${state.level === null}"><b style="font-size:.9rem">${t('todo')}</b></button>`;
+}
+$('#rail').addEventListener('click', e => { const b = e.target.closest('[data-level]'); if (b) setLevel(b.dataset.level || null); });
+function renderToolbar() {
+  const tb = $('#toolbar');
+  tb.hidden = !(state.mode === 'proyecto' || state.mode === 'unidad') || state.balcon;
+  if (tb.hidden) return;
+  tb.innerHTML = [['corte', t('corte')], ['xray', t('xray')], ['planta', t('plantaT')], ['vida', t('vida')], ['girar', t('girar')]]
+    .map(([k, n]) => `<button class="tool" type="button" data-tool="${k}" aria-pressed="${!!state[k]}" title="${n}">${svg(k)}<span>${n}</span></button>`).join('');
+}
+$('#toolbar').addEventListener('click', e => {
+  const b = e.target.closest('[data-tool]'); if (!b) return;
+  const k = b.dataset.tool; state[k] = !state[k];
+  if (k === 'planta') {
+    if (state.planta && state.level === null && state.mode === 'proyecto') state.level = 'L3';
+    refresh(); state.sel ? camUnit(unitById[state.sel]) : state.level ? camLevel(state.level) : camHome(); return;
+  }
+  if (k === 'corte' && state.corte && state.level === null && state.mode === 'proyecto') { const tg = new THREE.Vector3(0, 8, 0); flyTo(orbitPos(tg, 72 * aspectK(), 190, 74), tg); }
+  refresh();
+});
+
+const panel = $('#panel'), body = $('#panel-body');
+function planSVG(sel, mini) {
+  const L = sel.level, s = 10, pad = 14;
+  const slots = L === 'L0' ? LOBBY_SLOTS : L === 'L5' ? PH_SLOTS : TYPICAL;
+  const X = x => pad + (18 - x) * s, Y = z => pad + (9 - z) * s;
+  const W = 36 * s + pad * 2, HH = 18 * s + pad * 2 + (mini ? 0 : 18);
+  const rect = (x0, x1, z0, z1, attrs) => { const a = X(x0), b = X(x1), c = Y(z0), d = Y(z1); return `<rect x="${Math.min(a, b)}" y="${Math.min(c, d)}" width="${Math.abs(b - a)}" height="${Math.abs(d - c)}" ${attrs}/>`; };
+  let o = `<svg viewBox="0 0 ${W} ${HH}" role="img" aria-label="${t('planta')} · ${unitName(sel)}">`;
+  o += rect(-18, 18, -9, 9, 'fill="var(--plan-bg)"');
+  if (L !== 'L5') o += rect(-18, 18, -1.2, 1.2, 'fill="var(--plan-corr)"');
+  o += rect(-3, 3, L === 'L5' ? -9 : 1.2, 9, 'fill="var(--plan-corr)"');
+  o += rect(-3, 0, 1.4, 5, 'fill="var(--plan-core)" stroke="var(--plan-ink)" stroke-width="1"') + rect(0, 3, 1.4, 9, 'fill="var(--plan-core)" stroke="var(--plan-ink)" stroke-width="1"');
+  const labels = [];
+  slots.forEach(slot => {
+    const ty = TYPES[slot.type], u = UNITS.find(v => v.level === L && v.slot === slot), isSel = u && u.id === sel.id;
+    const fill = isSel ? 'var(--plan-sel)' : u ? hexCss(STATUS[u.status].hex) : 'var(--plan-core)';
+    const op = isSel ? 0.55 : u ? 0.18 : 0.45;
+    ty.rooms.forEach((r, ri) => {
+      const [ax, az] = L2W(slot, r.x0, r.z0), [bx, bz] = L2W(slot, r.x1, r.z1);
+      const curRoom = mini && isSel && viewRooms(sel)[state.room] === r;
+      o += rect(ax, bx, az, bz, `fill="${curRoom ? '#132f33' : fill}" fill-opacity="${curRoom ? 0.85 : op}" stroke="var(--plan-ink)" stroke-width="0.9"`);
+      if (!mini && isSel && (r.x1 - r.x0) >= 2.9 && (r.z1 - r.z0) >= 2.9 && r.k !== 'pasillo')
+        labels.push(`<text x="${(X(ax) + X(bx)) / 2}" y="${(Y(az) + Y(bz)) / 2 + 3}" text-anchor="middle" font-size="7.5" fill="var(--plan-ink)" font-family="IBM Plex Mono, monospace">${tr(r.n)}</text>`);
+    });
+    const [ax, az] = L2W(slot, 0, 0), [bx, bz] = L2W(slot, ty.w, ty.d);
+    o += rect(ax, bx, az, bz, `fill="none" stroke="var(--plan-ink)" stroke-width="${isSel ? 3 : 2}"`);
+    if (!mini && !isSel && u) labels.push(`<text x="${(X(ax) + X(bx)) / 2}" y="${(Y(az) + Y(bz)) / 2 + 4}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--plan-ink)" fill-opacity="0.7" font-family="Archivo, sans-serif">${u.short}</text>`);
+  });
+  o += rect(-18, 18, -9, 9, 'fill="none" stroke="var(--plan-ink)" stroke-width="3.5"');
+  o += labels.join('');
+  if (!mini) o += `<text x="${W / 2}" y="${HH - 5}" text-anchor="middle" font-size="9" letter-spacing="2" fill="var(--plan-muted)" font-family="IBM Plex Mono, monospace">${t('planNote')}</text>`;
+  return o + '</svg>';
+}
+const AMEN = [
+  { k: 'am_pool', level: 'R', pos: [-6, 19.2, -4] }, { k: 'am_gym', level: 'L0', pos: [-10.5, 0, 5.1] },
+  { k: 'am_cowork', level: 'L0', pos: [10.5, 0, 5.1] }, { k: 'am_lobby', level: 'L0', pos: [0, 0, -5] },
+];
+function renderPanel() {
+  const hidden = state.mode === 'v360' || (state.mode === 'proyecto' && state.panelHidden);
+  panel.hidden = hidden;
+  const reopen = $('#reopen');
+  reopen.hidden = !(state.mode === 'proyecto' && state.panelHidden);
+  reopen.innerHTML = `☰ ${t('mostrar')}`;
+  if (state.mode === 'zona') {
+    body.innerHTML = `
+      <div class="group"><p class="eyebrow">${t('ubic')}</p><h1>Torre Marea</h1><p style="margin:0;font-size:1.1rem">${t('lema')}</p></div>
+      <div class="group"><p class="eyebrow">${t('cerca')}</p>
+        <div class="cats">${CATS.map(c => `<button class="cat" type="button" data-cat="${c.k}" aria-pressed="${state.cats.has(c.k)}"><span class="ic" style="background:${hexCss(c.hex)}">${catSvg(c.k)}</span>${t('cat_' + c.k)}</button>`).join('')}</div>
+        <p class="muted" style="margin:0;font-size:.92rem">${t('rutaHint')}</p>
+        <div class="poi-list">${POIS.map((p, i) => [p, i]).filter(([p]) => state.cats.has(p.cat)).map(([p, i]) =>
+          `<button class="poi${state.poi === i ? ' on' : ''}" type="button" data-poi="${i}"><span class="ic" style="background:${hexCss(CAT[p.cat].hex)}">${catSvg(p.cat)}</span><span>${p[lang]}</span><b>${p.min} min</b></button>`).join('')}</div>
+        <label class="check" for="f-routes"><input id="f-routes" type="checkbox" ${state.allRoutes ? 'checked' : ''}>${t('todasRutas')}</label></div>
+      <button class="btn btn-gold" type="button" data-act="proyecto">${t('verProyecto')} →</button>`;
+  } else if (state.mode === 'proyecto') {
+    const f = state.f, list = UNITS.filter(matches);
+    const chip = (attr, val, label, on) => `<button class="chip" type="button" ${attr}="${val}" aria-pressed="${on}">${label}</button>`;
+    const stack = LEVELS.filter(L => UNITS.some(u => u.level === L.id)).reverse().map(L => {
+      const cells = UNITS.filter(u => u.level === L.id).map(u => `<button class="cell c-${u.status}${matches(u) ? '' : ' dim'}" type="button" data-unit="${u.id}" title="${unitName(u)} · ${fmtK(u.price)} · ${t('st_' + u.status)}"><b>${u.short}</b><small>${u.area} m²</small></button>`).join('');
+      return `<div class="srow"><span class="slabel">${L.floor ? L.floor : 'PB'}</span><div class="scells">${cells}</div></div>`;
+    }).join('');
+    body.innerHTML = `
+      <div class="row"><h2>${t('filtros')}</h2><button class="iconbtn" type="button" data-act="hide" aria-label="${t('ocultar')}" title="${t('ocultar')}">‹</button></div>
+      <div class="group"><p class="eyebrow">${t('tipo')}</p><div class="chips">${['ES', '2H', '3H', 'PH', 'LC'].map(k => chip('data-ftype', k, t('chip_' + k), f.types.has(k))).join('')}</div></div>
+      <div class="group"><p class="eyebrow">${t('vista')}</p><div class="chips">${['mar', 'jardin', 'calle'].map(k => chip('data-fvista', k, t('vista_' + k), f.vistas.has(k))).join('')}</div></div>
+      <div class="group"><label class="eyebrow" for="f-pmin">${t('precio')}</label>
+        <div class="range2"><input id="f-pmin" type="range" min="${PRICE_MIN}" max="${PRICE_MAX}" step="10000" value="${f.pmin}" aria-label="min">
+        <input id="f-pmax" type="range" min="${PRICE_MIN}" max="${PRICE_MAX}" step="10000" value="${f.pmax}" aria-label="max">
+        <div class="vals"><span id="o-pmin">${fmtK(f.pmin)}</span><span id="o-pmax">${fmtK(f.pmax)}</span></div></div></div>
+      <label class="check" for="f-free"><input id="f-free" type="checkbox" ${f.free ? 'checked' : ''}>${t('soloDisp')}</label>
+      <div class="count"><span><b id="o-count">${list.length}</b> ${t('unidades')}</span><button class="linkbtn" type="button" data-act="clear">${t('limpiar')}</button></div>
+      <div class="chips" style="gap:.9rem;font-size:.9rem;color:var(--muted)">${Object.keys(STATUS).map(s => `<span style="display:inline-flex;align-items:center;gap:.35rem"><i style="width:.7rem;height:.7rem;border-radius:.15rem;display:block;background:${hexCss(STATUS[s].hex)}"></i>${t('st_' + s)}</span>`).join('')}</div>
+      <div class="group"><p class="eyebrow">${t('mapa')}</p><div class="stack">${stack}</div></div>
+      <div class="group"><p class="eyebrow">${t('amen')}</p><div class="chips">${AMEN.map((a, i) => chip('data-amen', i, t(a.k), false)).join('')}</div></div>`;
+  } else if (state.mode === 'unidad') {
+    const u = unitById[state.sel], ty = TYPES[u.type];
+    const facts = u.type === 'LC'
+      ? [[u.area + ' m²', t('local')], [t('vista_' + u.vista), t('vista')], [lvlName(u.level), t('piso')], ['1', t('banos')]]
+      : [[ty.hab, t('hab')], [ty.banos, t('banos')], [u.area + ' m²', u.balc ? '+ ' + u.balc + ' ' + (u.type === 'PH' ? t('terraza') : t('balcon')) : '—'], [t('vista_' + u.vista), lvlName(u.level)]];
+    const tab = state.ftab;
+    body.innerHTML = `
+      <button class="back" type="button" data-act="back">${t('volverProyecto')}</button>
+      <div class="ftitle"><h2>${unitName(u)}</h2><span class="pill st-${u.status}">${t('st_' + u.status)}</span></div>
+      ${u.status === 'reservado' && u.vence ? `<p class="muted" style="margin:-.6rem 0 0">${t('reservadoHasta')} ${fmtDate(u.vence)}</p>` : ''}
+      <div class="price-row"><span class="price">USD ${fmt(u.price)}</span><span class="muted">USD ${fmt(Math.round(u.price / u.area))} ${t('porM2')}</span></div>
+      <div class="facts">${facts.map(([b, s]) => `<div class="fact"><b>${b}</b><span>${s}</span></div>`).join('')}</div>
+      <div class="tabs3" role="tablist">
+        <button type="button" role="tab" data-ftab="planta" aria-selected="${tab === 'planta'}">${t('planta')}</button>
+        <button type="button" role="tab" data-ftab="renders" aria-selected="${tab === 'renders'}">${t('renders')}</button>
+        <button type="button" role="tab" data-act="v360" aria-selected="false">${t('v360')}</button>
+      </div>
+      ${tab === 'planta' ? `<div class="plan">${planSVG(u)}</div>` : `<div class="renders">${viewRooms(u).slice(0, 4).map(r => `<div class="render">${t('renderPh')}<br>${tr(r.n)}</div>`).join('')}</div>`}
+      <div class="actions2">
+        <button class="btn btn-line" type="button" data-act="balcon">${state.balcon ? t('salirVista') : t('verVista')}</button>
+        <button class="btn btn-gold" type="button" data-act="reservar" ${u.status !== 'disponible' ? 'disabled' : ''}>${u.status === 'disponible' ? t('reservar') : t('noDisp')}</button>
+      </div>`;
+  }
+  applyOffset();
+}
+body.addEventListener('click', e => {
+  const el = e.target.closest('[data-act],[data-poi],[data-cat],[data-ftype],[data-fvista],[data-unit],[data-amen],[data-ftab]'); if (!el) return;
+  const d = el.dataset, f = state.f;
+  if (d.cat) {
+    state.cats.has(d.cat) ? state.cats.delete(d.cat) : state.cats.add(d.cat);
+    if (state.poi !== null && !state.cats.has(POIS[state.poi].cat)) { state.poi = null; camZona(); }
+    paint(); renderPanel(); renderZonaTags(); return;
+  }
+  if (d.poi !== undefined) return focusPoi(Number(d.poi));
+  if (d.ftype) { f.types.has(d.ftype) ? f.types.delete(d.ftype) : f.types.add(d.ftype); paint(); renderPanel(); return; }
+  if (d.fvista) { f.vistas.has(d.fvista) ? f.vistas.delete(d.fvista) : f.vistas.add(d.fvista); paint(); renderPanel(); return; }
+  if (d.unit) return selectUnit(d.unit);
+  if (d.amen !== undefined) { const a = AMEN[Number(d.amen)]; state.level = a.level; state.sel = null; refresh(); const tg = new THREE.Vector3(...a.pos); flyTo(orbitPos(tg, 34 * aspectK(), 205, 52), tg); return; }
+  if (d.ftab) { state.ftab = d.ftab; renderPanel(); return; }
+  switch (d.act) {
+    case 'proyecto': return goProyecto(true);
+    case 'hide': state.panelHidden = true; renderPanel(); return;
+    case 'clear': Object.assign(f, { types: new Set(), vistas: new Set(), pmin: PRICE_MIN, pmax: PRICE_MAX, free: false }); paint(); renderPanel(); return;
+    case 'back': return goProyecto(false);
+    case 'v360': return enter360();
+    case 'balcon': return toggleBalcon();
+    case 'reservar': return openBroker(state.sel);
+  }
+});
+body.addEventListener('input', e => {
+  const f = state.f, id = e.target.id;
+  if (id === 'f-pmin' || id === 'f-pmax') {
+    let a = Number($('#f-pmin').value), b = Number($('#f-pmax').value);
+    if (a > b) { if (id === 'f-pmin') b = a; else a = b; $('#f-pmin').value = a; $('#f-pmax').value = b; }
+    f.pmin = a; f.pmax = b; $('#o-pmin').textContent = fmtK(a); $('#o-pmax').textContent = fmtK(b);
+    $('#o-count').textContent = UNITS.filter(matches).length;
+    paint(); body.querySelectorAll('.cell').forEach(c => c.classList.toggle('dim', !matches(unitById[c.dataset.unit])));
+  }
+  if (id === 'f-free') { f.free = e.target.checked; paint(); renderPanel(); }
+  if (id === 'f-routes') { state.allRoutes = e.target.checked; if (state.allRoutes) routes.forEach(r => { r.k = 0; }); }
+});
+body.addEventListener('pointerover', e => { const c = e.target.closest('[data-unit]'); const id = c ? c.dataset.unit : null; if (id !== state.hover) { state.hover = id; paint(); } });
+body.addEventListener('pointerleave', () => { if (state.hover) { state.hover = null; paint(); } });
+$('#reopen').addEventListener('click', () => { state.panelHidden = false; renderPanel(); });
+
+function renderV360() {
+  const ui = $('#v360ui'); ui.hidden = state.mode !== 'v360';
+  if (ui.hidden) return;
+  const u = unitById[state.sel], rooms = viewRooms(u), r = rooms[state.room] || rooms[0];
+  ui.innerHTML = `
+    <button class="float v-back" type="button" data-v="back">${t('volverFicha')}</button>
+    <div class="float v-label"><span class="eyebrow">${unitName(u)} · ${t('type_' + u.type)}</span><b>${tr(r.n)}</b></div>
+    <div class="float v-rooms" role="group">${rooms.map((x, i) => `<button type="button" data-room="${i}" aria-pressed="${i === state.room}">${tr(x.n)}</button>`).join('')}</div>
+    <div class="float v-mini">${planSVG(u, true)}</div>
+    <p class="float v-hint" style="margin:0">${t('arrastra')}</p>`;
+}
+$('#v360ui').addEventListener('click', e => {
+  if (e.target.closest('[data-v="back"]')) return exit360();
+  const b = e.target.closest('[data-room]'); if (b) { state.room = Number(b.dataset.room); renderV360(); camRoom(); }
+});
+
+/* ================= BROKER ================= */
+/* Códigos de autorización por broker (demo). En la versión real viven en la base de datos. */
+const BROKERS = [
+  { code: '1111', name: 'Ana Pérez', email: 'ana@inmobiliaria.com' },
+  { code: '2222', name: 'Luis Gómez', email: 'luis@inmobiliaria.com' },
+];
+const NOTIFY_TO = 'ventas@torremarea.com';
+Object.assign(DICT.es, {
+  cTel: 'Teléfono', cCorreo: 'Correo', cAutorizo: 'Autorizó', avisos: 'Avisos enviados', sinAvisos: 'Todavía no hay avisos.',
+  authTitle: 'Autorizar cambio', authCode: 'Código del broker', authBtn: 'Autorizar', cancelar: 'Cancelar', authBad: 'Código incorrecto. Revisa e intenta de nuevo.',
+  authNeed: 'Escribe nombre, teléfono y correo del cliente.', diasRes: 'Días de reserva', cambiarA: 'Cambiar a',
+  mailTitle: 'Aviso enviado', mailNote: 'En esta demo el correo se muestra aquí. En la versión real se envía solo al correo designado.', ok: 'Entendido',
+  m_para: 'Para', m_asunto: 'Asunto', m_proyecto: 'Proyecto', m_unidad: 'Unidad', m_precio: 'Precio', m_estado: 'Nuevo estado',
+  m_vence: 'Reserva vence', m_cliente: 'Cliente', m_autorizo: 'Autorizado por', m_fecha: 'Fecha y hora', codesNote: 'Códigos de demo: 1111 (Ana Pérez) · 2222 (Luis Gómez)',
+  bkNote: 'Cambiar el estado pide el código del broker. Al reservar o vender se envía un aviso a ' + NOTIFY_TO + '. Al vencer una reserva, la unidad vuelve a Disponible. En esta demo no se guarda al recargar.',
+});
+Object.assign(DICT.en, {
+  cTel: 'Phone', cCorreo: 'Email', cAutorizo: 'Authorized by', avisos: 'Notices sent', sinAvisos: 'No notices yet.',
+  authTitle: 'Authorize change', authCode: 'Broker code', authBtn: 'Authorize', cancelar: 'Cancel', authBad: 'Wrong code. Check it and try again.',
+  authNeed: 'Enter the client name, phone and email.', diasRes: 'Reservation days', cambiarA: 'Change to',
+  mailTitle: 'Notice sent', mailNote: 'In this demo the email is shown here. In the real version it is sent only to the designated address.', ok: 'Got it',
+  m_para: 'To', m_asunto: 'Subject', m_proyecto: 'Project', m_unidad: 'Unit', m_precio: 'Price', m_estado: 'New status',
+  m_vence: 'Reservation ends', m_cliente: 'Client', m_autorizo: 'Authorized by', m_fecha: 'Date and time', codesNote: 'Demo codes: 1111 (Ana Pérez) · 2222 (Luis Gómez)',
+  bkNote: 'Changing a status asks for the broker code. Reserving or selling sends a notice to ' + NOTIFY_TO + '. When a reservation ends, the unit goes back to Available. This demo does not keep changes after reloading.',
+});
+UNITS.forEach((u, i) => {
+  u.telefono = ''; u.correo = ''; u.autorizo = '';
+  if (u.cliente) { u.telefono = '+1 809 555 01' + String(10 + i); u.correo = 'cliente' + (i + 1) + '@correo.com'; u.autorizo = BROKERS[i % 2].name; }
+});
+const notices = [];
+const bk = $('#broker'), bkCard = $('#broker-card');
+function openBroker(focusId) { checkExpired(); state.bkFocus = focusId || null; state.auth2 = null; state.mail = null; bk.hidden = false; renderBroker(); refresh(); }
+function closeBroker() { bk.hidden = true; state.auth2 = null; state.mail = null; refresh(); }
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function mailRows(n) {
+  return [[t('m_proyecto'), 'Torre Marea'], [t('m_unidad'), `${n.unit} · ${n.tipo}`], [t('m_precio'), 'USD ' + fmt(n.precio)],
+    [t('m_estado'), n.estado], ...(n.vence ? [[t('m_vence'), n.vence]] : []), [t('m_cliente'), `${n.cliente} · ${n.tel} · ${n.correo}`],
+    [t('m_autorizo'), `${n.broker} (${n.brokerMail})`], [t('m_fecha'), n.fecha]];
+}
+function renderBroker() {
+  if (bk.hidden) return;
+  if (!state.auth) {
+    bkCard.classList.add('login');
+    bkCard.innerHTML = `
+      <div class="bk-head"><h2>${t('panelTitle')}</h2><button class="x" type="button" data-bk="close" aria-label="${t('salirBroker')}">×</button></div>
+      <form class="login-form" id="bk-login">
+        <label for="bk-mail">${t('correo')}<input id="bk-mail" type="email" value="broker@inmobiliaria.com" autocomplete="username"></label>
+        <label for="bk-pass">${t('clave')}<input id="bk-pass" type="password" value="demo1234" autocomplete="current-password"></label>
+        <button class="btn btn-gold" type="submit">${t('entrar')}</button>
+        <p class="muted" style="margin:0;font-size:.9rem">${t('loginNote')}</p>
+      </form>`;
+    return;
+  }
+  bkCard.classList.remove('login');
+  const c = s => UNITS.filter(u => u.status === s).length;
+  const soon = UNITS.filter(u => u.status === 'reservado' && u.vence && daysLeft(u.vence) <= 7).length;
+  const a = state.auth2, m = state.mail;
+  let overlay = '';
+  if (a) {
+    const u = unitById[a.id], needClient = a.to !== 'disponible';
+    overlay = `<div class="bk-over"><form class="float bk-dialog" id="bk-auth" novalidate>
+      <h3>${t('authTitle')}</h3>
+      <p style="margin:0">${unitName(u)} · ${t('cambiarA')} <b class="st-${a.to}">${t('st_' + a.to)}</b></p>
+      ${needClient ? `
+        <label for="au-cli">${t('cCliente')}<input id="au-cli" value="${esc(a.cliente)}" autocomplete="off"></label>
+        <div class="two"><label for="au-tel">${t('cTel')}<input id="au-tel" type="tel" value="${esc(a.tel)}" autocomplete="off"></label>
+        <label for="au-mail">${t('cCorreo')}<input id="au-mail" type="email" value="${esc(a.correo)}" autocomplete="off"></label></div>` : ''}
+      ${a.to === 'reservado' ? `<div class="group"><span class="lbl">${t('diasRes')}</span><div class="segs2" role="group">
+        <button type="button" data-audays="15" aria-pressed="${a.days === 15}">15 ${t('dias')}</button><button type="button" data-audays="30" aria-pressed="${a.days === 30}">30 ${t('dias')}</button></div></div>` : ''}
+      <label for="au-code">${t('authCode')}<input id="au-code" inputmode="numeric" autocomplete="off" maxlength="6" class="code"></label>
+      ${a.err ? `<p class="err" role="alert">${a.err}</p>` : ''}
+      <p class="muted" style="margin:0;font-size:.85rem">${t('codesNote')}</p>
+      <div class="two"><button class="btn btn-line" type="button" data-bk="cancel">${t('cancelar')}</button><button class="btn btn-gold" type="submit">${t('authBtn')}</button></div>
+    </form></div>`;
+  } else if (m) {
+    overlay = `<div class="bk-over"><div class="float bk-dialog mail">
+      <h3>${t('mailTitle')}</h3>
+      <div class="mail-box">
+        <div class="mail-h"><span>${t('m_para')}</span><b>${NOTIFY_TO}</b></div>
+        <div class="mail-h"><span>${t('m_asunto')}</span><b>${esc(m.subject)}</b></div>
+        <dl>${mailRows(m).map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+      </div>
+      <p class="muted" style="margin:0;font-size:.85rem">${t('mailNote')}</p>
+      <button class="btn btn-gold" type="button" data-bk="mailok">${t('ok')}</button>
+    </div></div>`;
+  }
+  bkCard.innerHTML = `
+    <div class="bk-head"><h2>${t('panelTitle')}</h2><span class="muted">Torre Marea · broker@inmobiliaria.com</span><button class="x" type="button" data-bk="close" aria-label="${t('salirBroker')}">×</button></div>
+    <div class="bk-body">
+      <div class="bk-kpis">
+        <div class="bk-kpi"><b class="st-disponible">${c('disponible')}</b><span>${t('st_disponible')}</span></div>
+        <div class="bk-kpi"><b class="st-reservado">${c('reservado')}</b><span>${t('st_reservado')}</span></div>
+        <div class="bk-kpi"><b>${c('vendido')}</b><span>${t('st_vendido')}</span></div>
+        <div class="bk-kpi"><b class="soon">${soon}</b><span>${t('vencenSemana')}</span></div>
+      </div>
+      <p class="muted" style="margin:0;font-size:.92rem">${t('bkNote')}</p>
+      <div class="bk-table-wrap"><table>
+        <thead><tr><th>${t('cUnidad')}</th><th>${t('cPrecio')}</th><th>${t('cEstado')}</th><th>${t('cVence')}</th><th>${t('cCliente')}</th><th>${t('cTel')}</th><th>${t('cCorreo')}</th><th>${t('cAutorizo')}</th></tr></thead>
+        <tbody>${UNITS.map(u => `
+          <tr data-row="${u.id}" class="${state.bkFocus === u.id ? 'focus' : ''}">
+            <td><b>${unitName(u)}</b><br><span class="muted" style="font-size:.82rem">${t('type_' + u.type)}</span></td>
+            <td><input type="number" step="1000" min="0" value="${u.price}" data-price="${u.id}" aria-label="${t('cPrecio')} ${u.short}"></td>
+            <td><select data-estado="${u.id}" aria-label="${t('cEstado')} ${u.short}">${Object.keys(STATUS).map(s => `<option value="${s}" ${u.status === s ? 'selected' : ''}>${t('st_' + s)}</option>`).join('')}</select></td>
+            <td>${u.status === 'reservado' && u.vence ? `<span class="${daysLeft(u.vence) <= 7 ? 'soon' : ''}">${fmtDate(u.vence)} · ${daysLeft(u.vence)} ${t('dias')}</span>` : '<span class="muted">—</span>'}</td>
+            <td><input type="text" value="${esc(u.cliente)}" data-field="cliente" data-u="${u.id}" aria-label="${t('cCliente')} ${u.short}"></td>
+            <td><input type="tel" value="${esc(u.telefono)}" data-field="telefono" data-u="${u.id}" aria-label="${t('cTel')} ${u.short}"></td>
+            <td><input type="email" value="${esc(u.correo)}" data-field="correo" data-u="${u.id}" aria-label="${t('cCorreo')} ${u.short}"></td>
+            <td>${u.autorizo ? esc(u.autorizo) : '<span class="muted">—</span>'}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>
+      <div class="group"><p class="eyebrow">${t('avisos')} · ${NOTIFY_TO}</p>
+        ${notices.length ? `<div class="notices">${notices.map((n, i) => `<button type="button" class="notice" data-notice="${i}"><b>${esc(n.subject)}</b><span>${esc(n.broker)} · ${esc(n.fecha)}</span></button>`).join('')}</div>` : `<p class="muted" style="margin:0">${t('sinAvisos')}</p>`}
+      </div>
+    </div>${overlay}`;
+  if (a) { const f = bkCard.querySelector(a.to !== 'disponible' && !a.cliente ? '#au-cli' : '#au-code'); f && f.focus(); }
+  else { const row = bkCard.querySelector('tr.focus'); if (row && !m) row.scrollIntoView({ block: 'center' }); }
+}
+function readAuthFields() {
+  const a = state.auth2; if (!a) return;
+  const v = id => { const el = bkCard.querySelector(id); return el ? el.value.trim() : undefined; };
+  if (v('#au-cli') !== undefined) { a.cliente = v('#au-cli'); a.tel = v('#au-tel'); a.correo = v('#au-mail'); }
+}
+function authorize() {
+  const a = state.auth2; readAuthFields();
+  const code = bkCard.querySelector('#au-code').value.trim();
+  const u = unitById[a.id], needClient = a.to !== 'disponible';
+  if (needClient && (!a.cliente || !a.tel || !a.correo)) { a.err = t('authNeed'); return renderBroker(); }
+  const who = BROKERS.find(b => b.code === code);
+  if (!who) { a.err = t('authBad'); return renderBroker(); }
+  u.status = a.to; u.autorizo = who.name;
+  if (needClient) { u.cliente = a.cliente; u.telefono = a.tel; u.correo = a.correo; }
+  u.vence = a.to === 'reservado' ? today() + a.days * DAY : null;
+  if (a.to === 'disponible') { u.cliente = ''; u.telefono = ''; u.correo = ''; }
+  state.auth2 = null;
+  if (a.to !== 'disponible') {
+    const n = {
+      subject: `[Torre Marea] ${unitName(u)} · ${t('st_' + a.to)}`, unit: unitName(u), tipo: `${t('type_' + u.type)} · ${lvlName(u.level)}`,
+      precio: u.price, estado: t('st_' + a.to), vence: u.vence ? fmtDate(u.vence) : '', cliente: u.cliente, tel: u.telefono, correo: u.correo,
+      broker: who.name, brokerMail: who.email, fecha: new Date().toLocaleString(lang === 'en' ? 'en-US' : 'es-DO', { dateStyle: 'medium', timeStyle: 'short' }),
+    };
+    notices.unshift(n); state.mail = n;
+  }
+  renderBroker(); refresh();
+}
+bkCard.addEventListener('submit', e => {
+  e.preventDefault();
+  if (e.target.id === 'bk-login') { state.auth = true; return renderBroker(); }
+  if (e.target.id === 'bk-auth') authorize();
+});
+bkCard.addEventListener('click', e => {
+  const b = e.target.closest('[data-bk],[data-audays],[data-notice]'); if (!b) return;
+  if (b.dataset.audays) { readAuthFields(); state.auth2.days = Number(b.dataset.audays); return renderBroker(); }
+  if (b.dataset.notice !== undefined) { state.mail = notices[Number(b.dataset.notice)]; return renderBroker(); }
+  const k = b.dataset.bk;
+  if (k === 'close') closeBroker();
+  if (k === 'cancel') { state.auth2 = null; renderBroker(); }
+  if (k === 'mailok') { state.mail = null; renderBroker(); }
+});
+bkCard.addEventListener('change', e => {
+  const el = e.target, d = el.dataset;
+  if (d.price) { unitById[d.price].price = Math.max(0, Number(el.value) || 0); renderBroker(); refresh(); return; }
+  if (d.estado) {
+    const u = unitById[d.estado];
+    if (el.value === u.status) return;
+    state.auth2 = { id: u.id, to: el.value, days: 15, cliente: u.cliente, tel: u.telefono, correo: u.correo, err: '' };
+    el.value = u.status; renderBroker(); return;
+  }
+  if (d.field) { unitById[d.u][d.field] = el.value.trim(); }
+});
+bk.addEventListener('click', e => { if (e.target === bk) closeBroker(); });
+
+/* ================= TOP BAR ================= */
+document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => {
+  lang = b.dataset.lang; document.documentElement.lang = lang;
+  document.querySelectorAll('[data-lang]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.lang === lang)));
+  refresh(); renderBroker();
+}));
+$('#btn-broker').addEventListener('click', () => openBroker(state.sel));
+function setPresent(on) {
+  state.present = on; document.body.classList.toggle('present', on);
+  $('#exit-present').hidden = !on; $('#exit-present').textContent = t('salirPres');
+  applyOffset();
+}
+$('#btn-present').addEventListener('click', () => setPresent(true));
+$('#exit-present').addEventListener('click', () => setPresent(false));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!bk.hidden) { if (state.auth2 || state.mail) { state.auth2 = null; state.mail = null; return renderBroker(); } return closeBroker(); }
+  if (state.present) return setPresent(false);
+  if (state.mode === 'v360') return exit360();
+  if (state.balcon) return toggleBalcon();
+  if (state.mode === 'unidad') return goProyecto(false);
+});
+
+function applyOffset() {
+  const host = document.getElementById('stage'), w = host.clientWidth, h = host.clientHeight;
+  const p = document.getElementById('panel'), r = document.getElementById('rail');
+  if (w > 820 && !document.body.classList.contains('present')) {
+    const left = p && !p.hidden ? p.offsetWidth + 24 : 0, right = r && !r.hidden ? r.offsetWidth + 24 : 0;
+    camera.setViewOffset(w, h, -(left - right) / 2, 0, w, h);
+  } else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+}
+const skyEl = $('#sky');
+function renderSky() {
+  skyEl.hidden = state.mode === 'v360';
+  if (skyEl.hidden) return;
+  skyEl.innerHTML = `
+    <div class="sky-time"><span class="eyebrow">${t('hora')} · ${t('clima')}</span><b id="sky-h">${fmtHour(state.hour)}</b></div>
+    <input id="sky-range" type="range" min="5" max="21" step="0.25" value="${state.hour}" aria-label="${t('hora')}">
+    <div class="sky-w" role="group" aria-label="${t('clima')}">${WEATHER.map(w => `<button type="button" data-w="${w}" aria-pressed="${state.weather === w}" title="${t('w_' + w)}" aria-label="${t('w_' + w)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W_ICONS[w]}</svg></button>`).join('')}</div>`;
+  placeSky();
+}
+function placeSky() {
+  const tb = $('#toolbar');
+  skyEl.style.bottom = !tb.hidden && innerWidth > 820 ? `calc(${tb.offsetHeight}px + 1.5rem + env(safe-area-inset-bottom, 0px))` : '';
+}
+addEventListener('resize', placeSky);
+skyEl.addEventListener('input', e => { if (e.target.id !== 'sky-range') return; state.hour = Number(e.target.value); $('#sky-h').textContent = fmtHour(state.hour); applySky(); paint(); });
+skyEl.addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (!b) return; state.weather = b.dataset.w; applySky(); paint(); renderSky(); });
+function refresh() {
+  applySky(); paint(); renderCrumbs(); renderRail(); renderToolbar(); renderSky(); renderPanel(); renderV360(); renderZonaTags();
+  $('#lbl-broker').textContent = t('broker'); $('#lbl-present').textContent = t('presentar');
+}
+
+/* ================= PICKING ================= */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const buildingMeshes = []; LEVELS.forEach(L => levelGroups[L.id].traverse(o => { if (o.isMesh) buildingMeshes.push(o); }));
+function castAt(ev) { const r = renderer.domElement.getBoundingClientRect(); ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); }
+function pickUnit(ev) {
+  if (!(state.mode === 'proyecto' || state.mode === 'unidad') || state.balcon) return null;
+  castAt(ev);
+  const iso = state.level !== null;
+  const targets = iso ? zonePlates.filter(p => p.visible) : unitGlass.filter(m => m.parent.visible);
+  const hit = ray.intersectObjects(targets, false).find(h => !state.corte || h.point.z >= -8.7);
+  return hit ? hit.object.userData.unit : null;
+}
+const cv = renderer.domElement, tip = $('#tip'); let down = null;
+cv.addEventListener('pointermove', ev => {
+  if (ev.pointerType !== 'mouse' || ev.buttons) { tip.hidden = true; return; }
+  const id = pickUnit(ev);
+  cv.style.cursor = id ? 'pointer' : state.mode === 'v360' || state.balcon ? 'move' : 'grab';
+  if (id !== state.hover) { state.hover = id; paint(); }
+  if (id) {
+    const u = unitById[id], r = host.getBoundingClientRect();
+    tip.hidden = false;
+    tip.textContent = `${unitName(u)} · ${t('type_' + u.type)} · ${fmtK(u.price)} · ${t('st_' + u.status)}`;
+    tip.style.transform = `translate(${ev.clientX - r.left + 16}px, ${ev.clientY - r.top + 16}px)`;
+  } else tip.hidden = true;
+});
+cv.addEventListener('pointerleave', () => { tip.hidden = true; });
+cv.addEventListener('pointerdown', ev => { down = { x: ev.clientX, y: ev.clientY }; });
+cv.addEventListener('pointerup', ev => {
+  if (!down || Math.hypot(ev.clientX - down.x, ev.clientY - down.y) > 6) { down = null; return; }
+  down = null;
+  if (state.mode === 'zona') { castAt(ev); if (ray.intersectObjects(buildingMeshes, false).length) goProyecto(true); return; }
+  const id = pickUnit(ev); if (id) selectUnit(id);
+});
+
+/* ================= LOOP ================= */
+const clock = new THREE.Clock(), tmp = new THREE.Vector3(), dir = new THREE.Vector3();
+function place(el, pos) {
+  tmp.copy(pos).project(camera);
+  const vis = tmp.z < 1 && Math.abs(tmp.x) < 1.05 && Math.abs(tmp.y) < 1.05;
+  el.hidden = !vis;
+  if (vis) el.style.transform = `translate(${(tmp.x * .5 + .5) * host.clientWidth}px, ${(-tmp.y * .5 + .5) * host.clientHeight}px) translate(-50%, -100%)`;
+}
+function placeTags() {
+  const zona = state.mode === 'zona';
+  poiTags.forEach((p, i) => zona && state.cats.has(POIS[i].cat) ? place(p.el, p.pos) : (p.el.hidden = true));
+  roadTags.forEach(r => zona ? place(r.el, r.pos) : (r.el.hidden = true));
+  zona ? place(projTag, projTagPos) : (projTag.hidden = true);
+  ringTags.forEach(r => zona ? place(r.el, r.pos) : (r.el.hidden = true));
+  const showUnits = state.level !== null && (state.mode === 'proyecto' || state.mode === 'unidad') && !state.balcon;
+  UNITS.forEach(u => (showUnits && u.level === state.level) ? place(u.tag, u.tagPos) : (u.tag.hidden = true));
+}
+function loop() {
+  requestAnimationFrame(loop);
+  const raw = clock.getDelta(), dt = Math.min(raw, 0.05), time = clock.elapsedTime;
+  if (tween) {
+    tween.t = Math.min(1, tween.t + Math.min(raw, 0.12) / tween.dur);
+    const k = tween.t < 0.5 ? 4 * tween.t ** 3 : 1 - Math.pow(-2 * tween.t + 2, 3) / 2;
+    camera.position.lerpVectors(tween.fp, tween.tp, k); controls.target.lerpVectors(tween.ft, tween.tt, k);
+    camera.lookAt(controls.target);
+    if (tween.t >= 1) tween = null;
+  } else controls.update();
+  if (state.vida && !reduceMotion) people.forEach(p => {
+    if (!p.g.parent.visible) return;
+    if (p.wait > 0) { p.wait -= dt; return; }
+    dir.subVectors(p.target, p.g.position); dir.y = 0;
+    const d = dir.length();
+    if (d < 0.15) { p.wait = 0.8 + p.rand() * 2.5; pickTarget(p); return; }
+    dir.normalize(); p.g.position.addScaledVector(dir, Math.min(d, p.speed * dt));
+    p.g.rotation.y = Math.atan2(dir.x, dir.z);
+    p.g.children[1].position.y = 1.15 + Math.abs(Math.sin(time * 7 + p.phase)) * 0.04;
+  });
+  if (state.vida) updateCars(reduceMotion ? 0 : dt);
+  updateRoutes(dt, time);
+  if (rain.visible) updateRain(reduceMotion ? 0 : dt);
+  if (fpLight.intensity) fpLight.position.copy(camera.position);
+  renderer.render(scene, camera);
+  placeTags();
+}
+
+state.f = state.f; setControls('zona');
+refresh(); camZona(true);
+$('#loading').hidden = true;
+loop();
+
+</script>
+
+</body></html>
